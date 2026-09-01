@@ -36,7 +36,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 export function GuestBanner() {
-  const { isGuest, signIn } = useApp();
+  const { isGuest, signIn, authError, clearAuthError } = useApp();
 
   if (!isGuest) return null;
 
@@ -45,9 +45,15 @@ export function GuestBanner() {
       <p className="text-sm text-amber-900">
         You&apos;re using Fit locally. Data is saved on this device only.
       </p>
+      {authError && (
+        <p className="mt-2 text-sm text-red-700">{authError}</p>
+      )}
       <button
         type="button"
-        onClick={() => signIn()}
+        onClick={() => {
+          clearAuthError();
+          void signIn();
+        }}
         className="mt-2 text-sm font-semibold text-brand-700 hover:text-brand-800"
       >
         Sign in to back up and sync →

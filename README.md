@@ -17,7 +17,11 @@ Track body measurements and daily habits for you and your family. Built with Ast
    - Enable **Google** sign-in under Authentication
    - Create a **Firestore** database
    - Paste the rules below under Firestore → Rules (subcollections are required)
-   - Add your GitHub Pages domain to Authentication → Settings → Authorized domains
+   - Add your site hostname under Authentication → Settings → **Authorized domains**:
+     - `localhost` (default — local dev)
+     - `jeminpro.com` (production)
+     - `www.jeminpro.com` (only if you use www)
+   - Add the same `PUBLIC_FIREBASE_*` values as **GitHub repository secrets** (Settings → Secrets → Actions) so the deployed build includes Firebase config
 3. Install and run locally:
 
 ```bash
@@ -25,7 +29,18 @@ npm install
 npm run dev
 ```
 
-4. For GitHub Pages, add the same `PUBLIC_FIREBASE_*` values as repository secrets, then push to `main`.
+4. Add `PUBLIC_FIREBASE_*` as GitHub repository secrets, then push to `main` to deploy.
+
+## Production auth troubleshooting
+
+Firebase checks the **browser hostname** (not the path). Production URL: **https://jeminpro.com/fit/**
+
+| URL you open | Domain to add in Firebase |
+| --- | --- |
+| `https://jeminpro.com/fit/` | `jeminpro.com` |
+| `https://www.jeminpro.com/fit/` | `www.jeminpro.com` |
+
+If sign-in still fails, check GitHub Actions secrets — without them the production build has no Firebase keys.
 
 ## Firestore rules
 
@@ -67,4 +82,4 @@ Or deploy from this repo: `firebase deploy --only firestore:rules`
 
 ## Deploy
 
-The workflow in `.github/workflows/deploy.yml` builds and deploys to GitHub Pages at `https://jeminpro.github.io/fit/`.
+The workflow in `.github/workflows/deploy.yml` builds and deploys to GitHub Pages, served at **https://jeminpro.com/fit/**.

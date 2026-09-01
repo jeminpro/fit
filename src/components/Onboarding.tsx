@@ -14,7 +14,7 @@ interface OnboardingProps {
 }
 
 export function Onboarding({ onComplete }: OnboardingProps) {
-  const { user, isGuest, signIn, setupInitialProfile } = useApp();
+  const { user, isGuest, signIn, setupInitialProfile, authError, clearAuthError } = useApp();
   const [step, setStep] = useState(0);
   const [signingIn, setSigningIn] = useState(false);
   const [units, setUnitChoice] = useState<UnitSystem>('metric');
@@ -38,6 +38,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   async function handleSignIn() {
     setSigningIn(true);
     setError('');
+    clearAuthError();
     try {
       await signIn();
     } catch (err) {
@@ -127,6 +128,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       {error && step === 0 && isGuest && (
         <p className="mb-4 text-sm text-red-600">{error}</p>
+      )}
+      {authError && step === 0 && (
+        <p className="mb-4 text-sm text-red-600">{authError}</p>
       )}
 
       {step === 0 && (

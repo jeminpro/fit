@@ -15,6 +15,7 @@ import {
   signOut as firebaseSignOut,
   isFirebaseConfigured,
   completeRedirectSignIn,
+  formatAuthError,
 } from '../lib/firebase';
 import {
   subscribeUserPrefs,
@@ -72,6 +73,8 @@ interface AppContextValue {
   habitDaysMap: Map<string, HabitDay>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
+  authError: string | null;
+  clearAuthError: () => void;
   setActiveProfile: (profileId: string) => Promise<void>;
   setUnits: (units: UnitSystem) => Promise<void>;
   refreshPrefs: () => void;
@@ -111,6 +114,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [habitDays, setHabitDays] = useState<HabitDay[]>([]);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const migrationChecked = useRef(false);
 
@@ -138,7 +142,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void completeRedirectSignIn();
+    void completeRedirectSignIn().catch((error) => {
+      setAuthError(formatAuthError(error));
+    });
 
     return subscribeToAuth((nextUser) => {
       setUser(nextUser);
@@ -277,12 +283,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   async function signIn() {
-    await signInWithGoogle();
+    setAuthError(null);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      setAuthError(formatAuthError(error));
+      throw error;
+    }
   }
 
   async function signOut() {
+    setAuthError(null);
     await firebaseSignOut();
     refreshGuestData();
+  }
+
+  function clearAuthError() {
+    setAuthError(null);
   }
 
   async function setActiveProfile(profileId: string) {
@@ -439,6 +456,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     habitDaysMap,
     signIn,
     signOut,
+    authError,
+    clearAuthError,
     setActiveProfile,
     setUnits,
     refreshPrefs,
