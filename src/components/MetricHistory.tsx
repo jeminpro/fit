@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from 'recharts';
 import { useApp } from '../context/AppContext';
 import type { MeasurementType } from '../lib/types';
@@ -18,7 +19,21 @@ import {
   unitLabel,
   toCanonical,
 } from '../lib/units';
-import { formatDisplayDate, formatShortDate, ageInYears } from '../lib/dates';
+import {
+  formatDisplayDate,
+  formatShortDate,
+  ageInYears,
+  ageInMonths,
+} from '../lib/dates';
+import {
+  cdcChartSex,
+  formatPercentileLabel,
+  heightForAgePercentile,
+  statureCmAtZ,
+  Z_P3,
+  Z_P50,
+  Z_P97,
+} from '../lib/growth';
 
 type Range = '30' | '90' | 'all';
 
@@ -71,18 +86,96 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
     note: m.note,
   }));
 
-  const isGrowthChart =
-    type === 'height' &&
-    activeProfile &&
-    ageInYears(activeProfile.birthDate, new Date().toISOString()) < 18;
+  const currentAgeYears = activeProfile
+    ? ageInYears(activeProfile.birthDate, new Date().toISOString())
+    : 0;
 
-  const growthData = isGrowthChart
-    ? allData.map((m) => ({
-        age: ageInYears(activeProfile!.birthDate, m.recordedAt).toFixed(1),
-        value: fromCanonical(type, m.value, units),
-        date: formatShortDate(m.recordedAt),
-      }))
-    : [];
+  const isGrowthChart =
+    type === 'height' && activeProfile && currentAgeYears < 18;
+
+  const chartSex =
+    isGrowthChart && activeProfile && currentAgeYears >= 2
+      ? cdcChartSex(activeProfile.sex)
+      : null;
+
+  const latestHeightPercentile = useMemo(() => {
+    if (!isGrowthChart || !activeProfile || !chartSex || allData.length === 0) {
+      return null;
+    }
+    const latest = allData[allData.length - 1];
+    const months = ageInMonths(activeProfile.birthDate, latest.recordedAt);
+    return heightForAgePercentile(latest.value, activeProfile.sex, months);
+  }, [isGrowthChart, activeProfile, chartSex, allData]);
+
+  const growthData = useMemo(() => {
+    if (!isGrowthChart || !activeProfile) return [];
+
+    const childPoints = allData.map((m) => ({
+      age: ageInYears(activeProfile.birthDate, m.recordedAt),
+      height: fromCanonical(type, m.value, units),
+      date: formatShortDate(m.recordedAt),
+    }));
+
+    if (childPoints.length === 0) return [];
+
+    const showBands = Boolean(chartSex);
+    const ages = childPoints.map((p) => p.age);
+    const minChild = Math.min(...ages);
+    const maxChild = Math.max(...ages);
+    const minAge = showBands ? Math.max(2, minChild - 0.5) : minChild;
+    const maxAge = showBands ? Math.min(20, maxChild + 0.5) : maxChild;
+
+    type GrowthPoint = {
+      age: number;
+      height?: number;
+      date?: string;
+      p3?: number;
+      p50?: number;
+      p97?: number;
+    };
+
+    const points = new Map<string, GrowthPoint>();
+    const keyFor = (age: number) => age.toFixed(3);
+
+    const bandsAt = (ageYears: number) => {
+      if (!chartSex || ageYears < 2) return {};
+      const months = ageYears * 12;
+      const p3 = statureCmAtZ(chartSex, months, Z_P3);
+      const p50 = statureCmAtZ(chartSex, months, Z_P50);
+      const p97 = statureCmAtZ(chartSex, months, Z_P97);
+      if (p3 == null || p50 == null || p97 == null) return {};
+      return {
+        p3: fromCanonical('height', p3, units),
+        p50: fromCanonical('height', p50, units),
+        p97: fromCanonical('height', p97, units),
+      };
+    };
+
+    if (showBands) {
+      const start = Math.floor(minAge * 2) / 2;
+      for (let age = start; age <= maxAge + 1e-9; age += 0.5) {
+        const rounded = Math.round(age * 10) / 10;
+        points.set(keyFor(rounded), {
+          age: rounded,
+          ...bandsAt(rounded),
+        });
+      }
+    }
+
+    for (const child of childPoints) {
+      const key = keyFor(child.age);
+      const existing = points.get(key) ?? { age: child.age };
+      points.set(key, {
+        ...existing,
+        age: child.age,
+        height: child.height,
+        date: child.date,
+        ...(showBands ? bandsAt(child.age) : {}),
+      });
+    }
+
+    return [...points.values()].sort((a, b) => a.age - b.age);
+  }, [isGrowthChart, activeProfile, allData, chartSex, type, units]);
 
   function resetNewEntry() {
     setEditId(null);
@@ -284,32 +377,96 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
           </p>
         )}
 
-        {isGrowthChart && growthData.length > 1 && (
+        {isGrowthChart && allData.length > 1 && (
           <div className="mb-6">
-            <h3 className="mb-2 text-sm font-semibold text-slate-300">
+            <h3 className="mb-1 text-sm font-semibold text-slate-300">
               Growth chart (height vs age)
             </h3>
-            <div className="h-56">
+            {latestHeightPercentile != null && (
+              <p className="mb-2 text-xs text-slate-500">
+                Latest: {formatPercentileLabel(latestHeightPercentile)} (CDC)
+              </p>
+            )}
+            <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={growthData}>
+                <LineChart
+                  data={growthData}
+                  margin={{ top: 8, right: 8, bottom: 12, left: 0 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#233049" />
                   <XAxis
                     dataKey="age"
+                    type="number"
+                    domain={['dataMin', 'dataMax']}
+                    tickFormatter={(v: number) => Number(v).toFixed(1)}
                     tick={{ fontSize: 11, fill: '#94a3b8' }}
                     stroke="#334155"
-                    label={{ value: 'Age (years)', position: 'insideBottom', offset: -5, fill: '#94a3b8' }}
+                    label={{
+                      value: 'Age (years)',
+                      position: 'insideBottom',
+                      offset: -5,
+                      fill: '#94a3b8',
+                    }}
                   />
                   <YAxis
                     tick={{ fontSize: 11, fill: '#94a3b8' }}
                     stroke="#334155"
                     unit={` ${unitLabel(type, units)}`}
                   />
-                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+                  <Tooltip
+                    contentStyle={CHART_TOOLTIP_STYLE}
+                    labelFormatter={(label) => `Age ${Number(label).toFixed(1)}y`}
+                    formatter={(value: number, name: string) => [
+                      `${value} ${unitLabel(type, units)}`,
+                      name,
+                    ]}
+                  />
+                  {chartSex && (
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, color: '#94a3b8' }}
+                    />
+                  )}
+                  {chartSex && (
+                    <>
+                      <Line
+                        type="monotone"
+                        dataKey="p3"
+                        name="P3"
+                        stroke="#64748b"
+                        strokeDasharray="4 4"
+                        dot={false}
+                        connectNulls
+                        strokeWidth={1}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="p50"
+                        name="P50"
+                        stroke="#94a3b8"
+                        strokeDasharray="2 2"
+                        dot={false}
+                        connectNulls
+                        strokeWidth={1}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="p97"
+                        name="P97"
+                        stroke="#64748b"
+                        strokeDasharray="4 4"
+                        dot={false}
+                        connectNulls
+                        strokeWidth={1}
+                      />
+                    </>
+                  )}
                   <Line
                     type="monotone"
-                    dataKey="value"
+                    dataKey="height"
+                    name="Height"
                     stroke="#60a5fa"
                     strokeWidth={2}
+                    connectNulls
                     dot={{ r: 3, fill: '#60a5fa', stroke: '#60a5fa' }}
                   />
                 </LineChart>

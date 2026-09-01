@@ -45,8 +45,17 @@ export function ageFromBirthDate(birthDate: string, atDate = new Date()): {
 }
 
 export function ageInYears(birthDate: string, atDate: string): number {
-  const { years, months } = ageFromBirthDate(birthDate, parseISO(atDate));
-  return years + months / 12;
+  return ageInMonths(birthDate, atDate) / 12;
+}
+
+/** Age in months using a 365.25-day year, matching CDC growth-chart age. */
+export function ageInMonths(
+  birthDate: string,
+  atDate: string | Date = new Date(),
+): number {
+  const birth = parseISO(birthDate);
+  const at = typeof atDate === 'string' ? parseISO(atDate) : atDate;
+  return (at.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * (365.25 / 12));
 }
 
 export function getLastNDays(n: number): string[] {

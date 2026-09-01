@@ -1,4 +1,14 @@
 import type { Measurement, MeasurementType, Sex } from './types';
+import { ageInMonths } from './dates';
+import {
+  ADULT_YEARS,
+  WHTR_KID_MIN_YEARS,
+  bmiForAgePercentile,
+  cdcChartSex,
+  formatPercentileLabel,
+  formatPercentileShort,
+  heightForAgePercentile,
+} from './growth';
 
 export type MetricStatus = 'healthy' | 'moderate' | 'bad';
 
@@ -8,8 +18,12 @@ export interface DerivedMetric {
   value: number;
   formatted: string;
   hint?: string;
-  /** Undefined when adult thresholds don't apply (e.g. under-18 profiles). */
+  /** Extra line under the value, e.g. CDC percentile. */
+  detail?: string;
+  /** Undefined when thresholds don't apply. */
   status?: MetricStatus;
+  /** Overrides the default Healthy / Moderate / At risk badge copy. */
+  statusLabel?: string;
 }
 
 export interface DerivedMetricsProfile {
@@ -21,6 +35,29 @@ function bmiStatus(bmi: number): MetricStatus {
   if (bmi < 16 || bmi >= 30) return 'bad';
   if (bmi < 18.5 || bmi >= 25) return 'moderate';
   return 'healthy';
+}
+
+function bmiForAgeStatus(percentile: number): {
+  status: MetricStatus;
+  statusLabel: string;
+} {
+  if (percentile >= 95) return { status: 'bad', statusLabel: 'At risk' };
+  if (percentile >= 85)
+    return { status: 'moderate', statusLabel: 'Above typical' };
+  if (percentile < 5)
+    return { status: 'moderate', statusLabel: 'Below typical' };
+  return { status: 'healthy', statusLabel: 'Typical' };
+}
+
+function heightForAgeStatus(percentile: number): {
+  status: MetricStatus;
+  statusLabel: string;
+} {
+  if (percentile < 3)
+    return { status: 'moderate', statusLabel: 'Short for age' };
+  if (percentile > 97)
+    return { status: 'moderate', statusLabel: 'Tall for age' };
+  return { status: 'healthy', statusLabel: 'Typical' };
 }
 
 function whrStatus(ratio: number, sex: Sex): MetricStatus {
@@ -37,10 +74,12 @@ function whtrStatus(ratio: number): MetricStatus {
   return 'moderate';
 }
 
-function isAdult(birthDate: string): boolean {
-  const age =
-    (Date.now() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-  return age >= 18;
+function latestIso(...dates: string[]): string {
+  return dates.reduce((a, b) => (a > b ? a : b));
+}
+
+function yearsAt(birthDate: string, recordedAt: string): number {
+  return ageInMonths(birthDate, recordedAt) / 12;
 }
 
 export function getLatestByType(
@@ -65,46 +104,120 @@ export function computeDerivedMetrics(
   const waist = getLatestByType(measurements, 'waist');
   const hips = getLatestByType(measurements, 'hips');
 
-  // Adult reference ranges don't apply to kids, so skip status for them.
-  const useAdultRanges = profile ? isAdult(profile.birthDate) : false;
-
   const derived: DerivedMetric[] = [];
 
   if (weight && height) {
     const heightM = height.value / 100;
     const bmi = weight.value / (heightM * heightM);
-    derived.push({
+    const recordedAt = latestIso(weight.recordedAt, height.recordedAt);
+    const years = profile ? yearsAt(profile.birthDate, recordedAt) : undefined;
+    const months = profile
+      ? ageInMonths(profile.birthDate, recordedAt)
+      : undefined;
+
+    const metric: DerivedMetric = {
       key: 'bmi',
       label: 'BMI',
       value: bmi,
       formatted: bmi.toFixed(1),
-      hint: 'Body mass index from latest weight and height. Healthy adult range: 18.5–24.9.',
-      status: useAdultRanges ? bmiStatus(bmi) : undefined,
-    });
+      hint: 'Body mass index from latest weight and height.',
+    };
+
+    if (years !== undefined && years >= ADULT_YEARS) {
+      metric.hint =
+        'Body mass index from latest weight and height. Healthy adult range: 18.5–24.9.';
+      metric.status = bmiStatus(bmi);
+    } else if (
+      years !== undefined &&
+      months !== undefined &&
+      years >= 2 &&
+      years < ADULT_YEARS &&
+      profile &&
+      cdcChartSex(profile.sex)
+    ) {
+      const percentile = bmiForAgePercentile(bmi, profile.sex, months);
+      if (percentile != null) {
+        const scored = bmiForAgeStatus(percentile);
+        metric.detail = formatPercentileLabel(percentile);
+        metric.status = scored.status;
+        metric.statusLabel = scored.statusLabel;
+        metric.hint =
+          'Compared with children of the same age and sex (CDC). Typical: 5th–85th percentile.';
+      }
+    } else if (years !== undefined && years < 2) {
+      metric.hint =
+        'Body mass index from latest weight and height. CDC percentiles start at age 2.';
+    } else if (profile && !cdcChartSex(profile.sex) && years !== undefined && years < ADULT_YEARS) {
+      metric.hint =
+        'Body mass index from latest weight and height. Percentiles need male or female sex.';
+    }
+
+    derived.push(metric);
   }
 
-  if (waist && hips) {
-    const ratio = waist.value / hips.value;
-    derived.push({
-      key: 'whr',
-      label: 'Waist-to-hip',
-      value: ratio,
-      formatted: ratio.toFixed(2),
-      hint: 'Ratio of latest waist and hip measurements. Lower is generally healthier.',
-      status:
-        useAdultRanges && profile ? whrStatus(ratio, profile.sex) : undefined,
-    });
+  if (height && profile) {
+    const months = ageInMonths(profile.birthDate, height.recordedAt);
+    const years = months / 12;
+    if (years >= 2 && years < ADULT_YEARS && cdcChartSex(profile.sex)) {
+      const percentile = heightForAgePercentile(
+        height.value,
+        profile.sex,
+        months,
+      );
+      if (percentile != null) {
+        const scored = heightForAgeStatus(percentile);
+        derived.push({
+          key: 'height-for-age',
+          label: 'Height-for-age',
+          value: percentile,
+          formatted: formatPercentileShort(percentile),
+          hint: 'Compared with children of the same age and sex (CDC). Typical: 3rd–97th percentile.',
+          status: scored.status,
+          statusLabel: scored.statusLabel,
+        });
+      }
+    }
   }
 
   if (waist && height) {
     const ratio = waist.value / height.value;
+    const recordedAt = latestIso(waist.recordedAt, height.recordedAt);
+    const years = profile ? yearsAt(profile.birthDate, recordedAt) : undefined;
+    const scoreWhtr =
+      years !== undefined &&
+      (years >= ADULT_YEARS ||
+        (years >= WHTR_KID_MIN_YEARS && years < ADULT_YEARS));
+
     derived.push({
       key: 'whtr',
       label: 'Waist-to-height',
       value: ratio,
       formatted: ratio.toFixed(2),
-      hint: 'Below 0.5 is often associated with lower health risk.',
-      status: useAdultRanges ? whtrStatus(ratio) : undefined,
+      hint:
+        years !== undefined && years < ADULT_YEARS
+          ? years >= WHTR_KID_MIN_YEARS
+            ? 'Keep waist below half of height (ages 5+).'
+            : 'Waist-to-height is scored from age 5. Below 0.5 is generally lower risk.'
+          : 'Below 0.5 is often associated with lower health risk.',
+      status: scoreWhtr ? whtrStatus(ratio) : undefined,
+    });
+  }
+
+  if (waist && hips) {
+    const ratio = waist.value / hips.value;
+    const recordedAt = latestIso(waist.recordedAt, hips.recordedAt);
+    const years = profile ? yearsAt(profile.birthDate, recordedAt) : undefined;
+    const isAdult = years !== undefined && years >= ADULT_YEARS;
+
+    derived.push({
+      key: 'whr',
+      label: 'Waist-to-hip',
+      value: ratio,
+      formatted: ratio.toFixed(2),
+      hint: isAdult
+        ? 'Ratio of latest waist and hip measurements. Lower is generally healthier.'
+        : 'Ratio of latest waist and hip measurements. Adult cutoffs do not apply before 18.',
+      status: isAdult && profile ? whrStatus(ratio, profile.sex) : undefined,
     });
   }
 

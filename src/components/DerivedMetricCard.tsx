@@ -26,6 +26,7 @@ const STATUS_STYLES: Record<
 
 export function DerivedMetricCard({ metric }: { metric: DerivedMetric }) {
   const status = metric.status ? STATUS_STYLES[metric.status] : null;
+  const statusLabel = metric.statusLabel ?? status?.label;
 
   return (
     <div
@@ -36,12 +37,17 @@ export function DerivedMetricCard({ metric }: { metric: DerivedMetric }) {
       <p className="mt-0.5 text-lg font-bold text-slate-100">
         {metric.formatted}
       </p>
-      {status && (
+      {metric.detail && (
+        <p className="text-[10px] leading-tight text-slate-500">
+          {metric.detail}
+        </p>
+      )}
+      {status && statusLabel && (
         <span
           className={`mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${status.badge}`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${status.dot}`} />
-          {status.label}
+          {statusLabel}
         </span>
       )}
     </div>
