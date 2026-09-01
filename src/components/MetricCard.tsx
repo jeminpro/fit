@@ -26,7 +26,7 @@ export function Sparkline({ type, height = 40 }: SparklineProps) {
   if (data.length < 2) {
     return (
       <div
-        className="flex items-center justify-center text-xs text-slate-400"
+        className="flex items-center justify-center text-xs text-slate-600"
         style={{ height }}
       >
         —
@@ -47,7 +47,7 @@ export function Sparkline({ type, height = 40 }: SparklineProps) {
         <Line
           type="monotone"
           dataKey="value"
-          stroke="#16a34a"
+          stroke="#34d399"
           strokeWidth={2}
           dot={false}
         />
@@ -74,12 +74,30 @@ export function MetricCard({ type, onClick }: MetricCardProps) {
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-brand-300 hover:shadow-sm"
+      className="card-interactive group w-full p-4 text-left"
     >
-      <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
-        {MEASUREMENT_LABELS[type]}
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          {MEASUREMENT_LABELS[type]}
+        </span>
+        <span
+          className="text-slate-600 transition group-hover:translate-x-0.5 group-hover:text-brand-400"
+          aria-hidden="true"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M7.5 5l5 5-5 5" />
+          </svg>
+        </span>
       </div>
-      <div className="text-xl font-bold text-slate-900">
+      <div className="text-xl font-bold text-slate-100">
         {latest
           ? formatMeasurementValue(type, latest.value, units)
           : 'No data'}
@@ -87,10 +105,10 @@ export function MetricCard({ type, onClick }: MetricCardProps) {
       {delta !== null && (
         <div
           className={`mt-1 text-xs font-medium ${
-            delta <= 0 ? 'text-brand-600' : 'text-amber-600'
+            delta <= 0 ? 'text-brand-400' : 'text-amber-400'
           }`}
         >
-          {delta > 0 ? '+' : ''}
+          {delta > 0 ? '↑ +' : delta < 0 ? '↓ ' : ''}
           {formatMeasurementValue(type, Math.abs(delta), units).split(' ')[0]}{' '}
           vs last
         </div>

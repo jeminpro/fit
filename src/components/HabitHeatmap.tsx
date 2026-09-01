@@ -13,10 +13,10 @@ import {
 import { format, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 
 function scoreColor(score: number | null): string {
-  if (score === null) return 'bg-slate-100';
+  if (score === null) return 'bg-surface-800';
   if (score >= 7) return 'bg-brand-500';
   if (score >= 4) return 'bg-amber-400';
-  return 'bg-red-400';
+  return 'bg-rose-400';
 }
 
 export function HabitHeatmap() {
@@ -72,10 +72,10 @@ export function HabitHeatmap() {
           <button
             type="button"
             onClick={() => setSelectedHabit('all')}
-            className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+            className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-semibold transition ${
               selectedHabit === 'all'
-                ? 'bg-brand-600 text-white'
-                : 'bg-slate-100 text-slate-600'
+                ? 'bg-brand-500 text-surface-950'
+                : 'bg-surface-800 text-slate-400 hover:bg-surface-700 hover:text-slate-200'
             }`}
           >
             Overall
@@ -85,10 +85,10 @@ export function HabitHeatmap() {
               key={key}
               type="button"
               onClick={() => setSelectedHabit(key)}
-              className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+              className={`cursor-pointer rounded-lg px-3 py-1 text-xs font-semibold transition ${
                 selectedHabit === key
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-brand-500 text-surface-950'
+                  : 'bg-surface-800 text-slate-400 hover:bg-surface-700 hover:text-slate-200'
               }`}
             >
               {HABIT_LABELS[key]}
@@ -123,20 +123,41 @@ export function HabitHeatmap() {
             ))}
           </div>
         </div>
-        <p className="mt-2 text-xs text-slate-500">Last 90 days</p>
+        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+          <span>Last 90 days</span>
+          <span className="flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-sm bg-brand-500" /> Good
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-sm bg-amber-400" /> OK
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" /> Low
+            </span>
+          </span>
+        </div>
       </div>
 
       <div>
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">
+        <h3 className="mb-3 text-sm font-semibold text-slate-300">
           Weekly average score
         </h3>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={weeklyScores}>
-              <XAxis dataKey="week" tick={{ fontSize: 10 }} />
-              <YAxis domain={[0, 10]} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="score" fill="#16a34a" radius={[4, 4, 0, 0]} />
+              <XAxis dataKey="week" tick={{ fontSize: 10, fill: '#94a3b8' }} stroke="#334155" />
+              <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#334155" />
+              <Tooltip
+                cursor={{ fill: 'rgb(51 65 85 / 0.3)' }}
+                contentStyle={{
+                  backgroundColor: '#0f1626',
+                  border: '1px solid #233049',
+                  borderRadius: '0.75rem',
+                  color: '#f1f5f9',
+                }}
+              />
+              <Bar dataKey="score" fill="#10b981" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -4,6 +4,7 @@ import { HABIT_KEYS } from '../lib/constants';
 import { todayKey, habitScore, computeHabitStreak } from '../lib/dates';
 import { subDays, format } from 'date-fns';
 import { HabitRow } from './HabitRow';
+import { DerivedMetricCard } from './DerivedMetricCard';
 import {
   getLatestByType,
   findMeasurementDaysAgo,
@@ -54,52 +55,55 @@ export function TodayDashboard() {
     return items;
   }, [measurements]);
 
-  const derived = computeDerivedMetrics(measurements);
+  const derived = computeDerivedMetrics(
+    measurements,
+    activeProfile ?? undefined,
+  );
 
   if (!activeProfile) return null;
 
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="card p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Habit score
           </p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">
+          <p className="mt-1 text-3xl font-bold text-slate-100">
             {score !== null ? `${score}/10` : '—'}
           </p>
           <p className="mt-1 text-xs text-slate-500">
             {completedToday}/{HABIT_KEYS.length} logged today
           </p>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="card p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Streak
           </p>
-          <p className="mt-1 text-3xl font-bold text-brand-600">{streak}</p>
+          <p className="mt-1 text-3xl font-bold text-brand-400">{streak}</p>
           <p className="mt-1 text-xs text-slate-500">days in a row</p>
         </div>
       </section>
 
       {latestWeight && (
-        <section className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-brand-50 p-4">
+        <section className="card bg-gradient-to-br from-surface-900 to-brand-900/30 p-4">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Latest weight
               </p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
+              <p className="mt-1 text-2xl font-bold text-slate-100">
                 {formatMeasurementValue('weight', latestWeight.value, units)}
               </p>
               {weightDelta !== null && (
-                <p className="mt-1 text-sm text-slate-600">
+                <p className="mt-1 text-sm text-slate-400">
                   {formatDelta('weight', weightDelta, units)} vs 7 days ago
                 </p>
               )}
             </div>
             <a
               href={`${base}body`}
-              className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white"
+              className="btn-primary px-3 py-1.5 text-xs"
             >
               Log measure
             </a>
@@ -108,11 +112,11 @@ export function TodayDashboard() {
       )}
 
       {!latestWeight && (
-        <section className="rounded-xl border border-dashed border-slate-300 bg-white p-4 text-center">
-          <p className="text-sm text-slate-600">No weight logged yet.</p>
+        <section className="rounded-2xl border border-dashed border-surface-700 bg-surface-900/50 p-4 text-center">
+          <p className="text-sm text-slate-400">No weight logged yet.</p>
           <a
             href={`${base}body`}
-            className="mt-2 inline-block text-sm font-semibold text-brand-600"
+            className="mt-2 inline-block text-sm font-semibold text-brand-400 transition hover:text-brand-300"
           >
             Start a body check-in →
           </a>
@@ -121,18 +125,12 @@ export function TodayDashboard() {
 
       {derived.length > 0 && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+          <h3 className="mb-2 text-sm font-semibold text-slate-300">
             Derived metrics
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {derived.map((d) => (
-              <div
-                key={d.key}
-                className="rounded-xl border border-slate-200 bg-white p-3 text-center"
-              >
-                <p className="text-xs text-slate-500">{d.label}</p>
-                <p className="text-lg font-bold text-slate-900">{d.formatted}</p>
-              </div>
+              <DerivedMetricCard key={d.key} metric={d} />
             ))}
           </div>
         </section>
@@ -143,7 +141,7 @@ export function TodayDashboard() {
           {nudges.map((nudge) => (
             <div
               key={nudge}
-              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
             >
               {nudge}
             </div>
@@ -153,7 +151,9 @@ export function TodayDashboard() {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">Today&apos;s habits</h3>
+          <h3 className="text-sm font-semibold text-slate-300">
+            Today&apos;s habits
+          </h3>
           <span className="text-xs text-slate-500">{today}</span>
         </div>
         <div className="space-y-3">

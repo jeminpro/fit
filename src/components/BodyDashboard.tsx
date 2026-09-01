@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { MetricCard } from './MetricCard';
+import { DerivedMetricCard } from './DerivedMetricCard';
 import { CheckinWizard } from './CheckinWizard';
 import { MetricHistory } from './MetricHistory';
 import type { MeasurementType } from '../lib/types';
@@ -15,7 +16,7 @@ export function BodyDashboard() {
   if (!activeProfile) return null;
 
   const enabled = activeProfile.enabledMeasurements;
-  const derived = computeDerivedMetrics(measurements);
+  const derived = computeDerivedMetrics(measurements, activeProfile);
   const isKid =
     new Date().getFullYear() - new Date(activeProfile.birthDate).getFullYear() < 18;
 
@@ -25,7 +26,7 @@ export function BodyDashboard() {
         <button
           type="button"
           onClick={() => setShowWizard(true)}
-          className="flex-1 rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+          className="btn-primary flex-1 py-3 text-sm"
         >
           Weekly check-in
         </button>
@@ -33,7 +34,7 @@ export function BodyDashboard() {
           <button
             type="button"
             onClick={() => setSelectedType('height')}
-            className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700"
+            className="btn-secondary px-4 py-3 text-sm text-brand-300"
           >
             Log height
           </button>
@@ -42,26 +43,19 @@ export function BodyDashboard() {
 
       {derived.length > 0 && (
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-slate-700">
+          <h3 className="mb-2 text-sm font-semibold text-slate-300">
             Derived metrics
           </h3>
           <div className="grid grid-cols-3 gap-2">
             {derived.map((d) => (
-              <div
-                key={d.key}
-                className="rounded-xl border border-slate-200 bg-white p-3"
-                title={d.hint}
-              >
-                <p className="text-xs text-slate-500">{d.label}</p>
-                <p className="text-lg font-bold">{d.formatted}</p>
-              </div>
+              <DerivedMetricCard key={d.key} metric={d} />
             ))}
           </div>
         </section>
       )}
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">
+        <h3 className="mb-3 text-sm font-semibold text-slate-300">
           Measurements
         </h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

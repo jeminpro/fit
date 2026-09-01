@@ -25,13 +25,13 @@ export function AppShell({ title, route, onNavigate, children }: AppShellProps) 
         <Onboarding onComplete={() => setOnboarded(true)} />
       ) : (
         <div className="mx-auto min-h-screen max-w-lg pb-24">
-          <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur">
+          <header className="sticky top-0 z-40 border-b border-surface-800 bg-surface-950/90 px-4 py-4 backdrop-blur-md">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-brand-600">
+                <p className="text-xs font-semibold uppercase tracking-widest text-brand-400">
                   Fit
                 </p>
-                <h1 className="text-xl font-bold text-slate-900">{title}</h1>
+                <h1 className="text-xl font-bold text-slate-100">{title}</h1>
               </div>
               <ProfileSwitcher />
             </div>

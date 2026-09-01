@@ -5,7 +5,7 @@ export function ProfileSwitcher() {
 
   if (profiles.length <= 1) {
     return (
-      <div className="text-sm font-medium text-slate-600">
+      <div className="text-sm font-medium text-slate-400">
         {activeProfile?.name ?? 'No profile'}
       </div>
     );
@@ -15,7 +15,7 @@ export function ProfileSwitcher() {
     <select
       value={activeProfile?.id ?? ''}
       onChange={(e) => setActiveProfile(e.target.value)}
-      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200"
+      className="cursor-pointer rounded-lg border border-surface-700 bg-surface-800 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
       aria-label="Switch profile"
     >
       {profiles.map((profile) => (

@@ -165,30 +165,30 @@ export function YouPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-slate-700">Account</h3>
+      <section className="card p-4">
+        <h3 className="text-sm font-semibold text-slate-300">Account</h3>
         {isGuest ? (
           <div className="mt-2">
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-400">
               Using local storage on this device.
             </p>
             <button
               type="button"
               onClick={() => signIn()}
-              className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white"
+              className="btn-primary mt-3 px-4 py-2 text-sm"
             >
               Sign in with Google
             </button>
           </div>
         ) : (
-          <p className="mt-1 text-sm text-slate-600">{user?.email}</p>
+          <p className="mt-1 text-sm text-slate-400">{user?.email}</p>
         )}
         <label className="mt-4 block">
-          <span className="text-sm font-medium text-slate-700">Units</span>
+          <span className="text-sm font-medium text-slate-300">Units</span>
           <select
             value={units}
             onChange={(e) => setUnits(e.target.value as UnitSystem)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+            className="input mt-1"
           >
             <option value="metric">Metric (kg, cm)</option>
             <option value="imperial">Imperial (lb, in)</option>
@@ -198,16 +198,16 @@ export function YouPage() {
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700">Profiles</h3>
+          <h3 className="text-sm font-semibold text-slate-300">Profiles</h3>
           <button
             type="button"
             onClick={() => {
               resetForm();
               setShowAddProfile(true);
             }}
-            className="text-sm font-semibold text-brand-600"
+            className="cursor-pointer text-sm font-semibold text-brand-400 transition hover:text-brand-300"
           >
-            Add profile
+            + Add profile
           </button>
         </div>
 
@@ -215,24 +215,24 @@ export function YouPage() {
           {profiles.map((profile) => (
             <div
               key={profile.id}
-              className={`flex items-center justify-between rounded-xl border px-4 py-3 ${
+              className={`flex items-center justify-between rounded-xl border px-4 py-3 transition ${
                 activeProfile?.id === profile.id
-                  ? 'border-brand-300 bg-brand-50'
-                  : 'border-slate-200 bg-white'
+                  ? 'border-brand-500/50 bg-brand-500/10'
+                  : 'border-surface-700 bg-surface-900/60'
               }`}
             >
               <div>
-                <p className="font-semibold text-slate-900">{profile.name}</p>
+                <p className="font-semibold text-slate-100">{profile.name}</p>
                 <p className="text-xs text-slate-500">
                   Born {profile.birthDate} · {profile.sex}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 {activeProfile?.id !== profile.id && (
                   <button
                     type="button"
                     onClick={() => setActiveProfile(profile.id)}
-                    className="text-xs font-medium text-brand-600"
+                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-brand-400 transition hover:bg-brand-500/10 hover:text-brand-300"
                   >
                     Switch
                   </button>
@@ -240,7 +240,7 @@ export function YouPage() {
                 <button
                   type="button"
                   onClick={() => loadProfileForEdit(profile.id)}
-                  className="text-xs font-medium text-slate-600"
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-slate-400 transition hover:bg-surface-700 hover:text-slate-200"
                 >
                   Edit
                 </button>
@@ -248,7 +248,7 @@ export function YouPage() {
                   <button
                     type="button"
                     onClick={() => removeProfile(profile.id)}
-                    className="text-xs font-medium text-red-600"
+                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-rose-400 transition hover:bg-rose-500/10 hover:text-rose-300"
                   >
                     Delete
                   </button>
@@ -259,8 +259,8 @@ export function YouPage() {
         </div>
 
         {showAddProfile && (
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h4 className="font-semibold text-slate-800">
+          <div className="card mt-4 p-4">
+            <h4 className="font-semibold text-slate-200">
               {editingId ? 'Edit profile' : 'New profile'}
             </h4>
             <div className="mt-3 space-y-3">
@@ -268,12 +268,12 @@ export function YouPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Name"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                className="input rounded-lg px-3 py-2"
               />
               <select
                 value={sex}
                 onChange={(e) => setSex(e.target.value as Sex)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                className="input rounded-lg px-3 py-2"
               >
                 <option value="male">Male</option>
                 <option value="female">Female</option>
@@ -283,16 +283,20 @@ export function YouPage() {
                 type="date"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                className="input rounded-lg px-3 py-2"
               />
               <p className="text-xs font-medium text-slate-500">Measurements</p>
               {[...DEFAULT_ENABLED_MEASUREMENTS, ...OPTIONAL_MEASUREMENTS].map(
                 (type) => (
-                  <label key={type} className="flex items-center gap-2 text-sm">
+                  <label
+                    key={type}
+                    className="flex cursor-pointer items-center gap-2 text-sm text-slate-300"
+                  >
                     <input
                       type="checkbox"
                       checked={enabled.includes(type)}
                       onChange={() => toggleMeasurement(type)}
+                      className="accent-brand-500"
                     />
                     {MEASUREMENT_LABELS[type]}
                   </label>
@@ -304,7 +308,7 @@ export function YouPage() {
                 value={targetWeight}
                 onChange={(e) => setTargetWeight(e.target.value)}
                 placeholder={`Target weight (${units === 'metric' ? 'kg' : 'lb'})`}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                className="input rounded-lg px-3 py-2"
               />
               <input
                 type="number"
@@ -312,14 +316,14 @@ export function YouPage() {
                 value={targetWaist}
                 onChange={(e) => setTargetWaist(e.target.value)}
                 placeholder={`Target waist (${units === 'metric' ? 'cm' : 'in'})`}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                className="input rounded-lg px-3 py-2"
               />
             </div>
             <div className="mt-4 flex gap-2">
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
+                className="btn-secondary rounded-lg px-4 py-2 text-sm"
               >
                 Cancel
               </button>
@@ -327,7 +331,7 @@ export function YouPage() {
                 type="button"
                 onClick={saveProfile}
                 disabled={saving}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="btn-primary rounded-lg px-4 py-2 text-sm"
               >
                 {saving ? 'Saving…' : 'Save'}
               </button>
@@ -337,14 +341,14 @@ export function YouPage() {
       </section>
 
       <section>
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">
+        <h3 className="mb-3 text-sm font-semibold text-slate-300">
           Habit history
         </h3>
         <HabitHeatmap />
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 className="text-sm font-semibold text-slate-700">Export data</h3>
+      <section className="card p-4">
+        <h3 className="text-sm font-semibold text-slate-300">Export data</h3>
         <p className="mt-1 text-sm text-slate-500">
           Download CSV for the active profile or JSON for all profiles.
         </p>
@@ -353,7 +357,7 @@ export function YouPage() {
             type="button"
             onClick={exportActiveProfile}
             disabled={exporting || !activeProfile}
-            className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="btn-primary rounded-lg px-4 py-2 text-sm"
           >
             Export active (CSV)
           </button>
@@ -361,7 +365,7 @@ export function YouPage() {
             type="button"
             onClick={exportAll}
             disabled={exporting}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50"
+            className="btn-secondary rounded-lg px-4 py-2 text-sm"
           >
             Export all (JSON)
           </button>
@@ -372,7 +376,7 @@ export function YouPage() {
         <button
           type="button"
           onClick={() => signOut()}
-          className="w-full rounded-xl border border-red-200 py-3 text-sm font-semibold text-red-600"
+          className="w-full cursor-pointer rounded-xl border border-rose-500/30 py-3 text-sm font-semibold text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
         >
           Sign out
         </button>

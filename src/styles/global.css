@@ -1,23 +1,75 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f0fdf4;
-  --color-brand-100: #dcfce7;
-  --color-brand-200: #bbf7d0;
-  --color-brand-300: #86efac;
-  --color-brand-400: #4ade80;
-  --color-brand-500: #22c55e;
-  --color-brand-600: #16a34a;
-  --color-brand-700: #15803d;
-  --color-brand-800: #166534;
-  --color-brand-900: #14532d;
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+
+  --color-surface-950: #090e1a;
+  --color-surface-900: #0f1626;
+  --color-surface-800: #182136;
+  --color-surface-700: #233049;
+}
+
+html {
+  color-scheme: dark;
 }
 
 html,
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-surface-950 text-slate-100 antialiased;
 }
 
 body {
   min-height: 100dvh;
+  background-image: radial-gradient(
+    55rem 28rem at 50% -8rem,
+    rgb(16 185 129 / 0.09),
+    transparent
+  );
+  background-repeat: no-repeat;
+}
+
+/* Every enabled interactive element should read as clickable */
+button:not(:disabled),
+select,
+[role="button"],
+label:has(> input[type="checkbox"]) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+@utility card {
+  @apply rounded-2xl border border-surface-700/60 bg-surface-900/80 shadow-lg shadow-black/20;
+}
+
+@utility card-interactive {
+  @apply card cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:border-brand-500/50 hover:bg-surface-800 hover:shadow-xl hover:shadow-brand-500/10 active:translate-y-0 active:scale-[0.99];
+}
+
+@utility btn-primary {
+  @apply inline-flex cursor-pointer items-center justify-center rounded-xl bg-brand-500 font-semibold text-surface-950 shadow-lg shadow-brand-500/25 transition duration-200 hover:bg-brand-400 hover:shadow-brand-400/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility btn-secondary {
+  @apply inline-flex cursor-pointer items-center justify-center rounded-xl border border-surface-700 bg-surface-800/60 font-semibold text-slate-200 transition duration-200 hover:border-slate-500 hover:bg-surface-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+@utility input {
+  @apply w-full rounded-xl border border-surface-700 bg-surface-800/80 px-3 py-2.5 text-slate-100 placeholder:text-slate-500 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25;
 }

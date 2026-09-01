@@ -28,16 +28,16 @@ export function HabitRow({ habitKey, value, yesterdayValue }: HabitRowProps) {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
+    <div className="card p-4">
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-800">
+        <span className="text-sm font-semibold text-slate-200">
           {HABIT_LABELS[habitKey]}
         </span>
         {yesterdayValue !== undefined && value === undefined && (
           <button
             type="button"
             onClick={() => setLevel(yesterdayValue)}
-            className="text-xs font-medium text-brand-600 hover:text-brand-700"
+            className="cursor-pointer text-xs font-medium text-brand-400 transition hover:text-brand-300"
           >
             Same as yesterday
           </button>
@@ -51,13 +51,13 @@ export function HabitRow({ habitKey, value, yesterdayValue }: HabitRowProps) {
           const color =
             active && isSnacks
               ? level === 0
-                ? 'bg-brand-600 text-white'
+                ? 'bg-brand-500 text-surface-950 shadow-lg shadow-brand-500/25'
                 : level === 1
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-red-500 text-white'
+                  ? 'bg-amber-500 text-surface-950 shadow-lg shadow-amber-500/25'
+                  : 'bg-rose-500 text-white shadow-lg shadow-rose-500/25'
               : active
-                ? 'bg-brand-600 text-white'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+                ? 'bg-brand-500 text-surface-950 shadow-lg shadow-brand-500/25'
+                : 'bg-surface-800 text-slate-300 hover:bg-surface-700 hover:text-slate-100';
 
           return (
             <button
@@ -65,7 +65,7 @@ export function HabitRow({ habitKey, value, yesterdayValue }: HabitRowProps) {
               type="button"
               disabled={saving}
               onClick={() => setLevel(level)}
-              className={`rounded-lg py-2.5 text-sm font-semibold transition ${color} disabled:opacity-60`}
+              className={`cursor-pointer rounded-lg py-2.5 text-sm font-semibold transition active:scale-[0.97] ${color} disabled:cursor-not-allowed disabled:opacity-60`}
             >
               {label}
             </button>

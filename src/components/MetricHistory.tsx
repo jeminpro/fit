@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   LineChart,
   Line,
@@ -22,6 +22,13 @@ import { formatDisplayDate, formatShortDate, ageInYears } from '../lib/dates';
 
 type Range = '30' | '90' | 'all';
 
+const CHART_TOOLTIP_STYLE = {
+  backgroundColor: '#0f1626',
+  border: '1px solid #233049',
+  borderRadius: '0.75rem',
+  color: '#f1f5f9',
+};
+
 interface MetricHistoryProps {
   type: MeasurementType;
   tip: string;
@@ -39,13 +46,13 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
   } = useApp();
   const units = prefs?.units ?? 'metric';
   const [range, setRange] = useState<Range>('90');
-  const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [value, setValue] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const valueInputRef = useRef<HTMLInputElement>(null);
 
   const allData = getMeasurementsByType(measurements, type);
   const filtered = useMemo(() => {
@@ -77,6 +84,25 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
       }))
     : [];
 
+  function resetNewEntry() {
+    setEditId(null);
+    setValue('');
+    setNote('');
+    setDate(new Date().toISOString().slice(0, 10));
+    setSaveError('');
+  }
+
+  function focusValueField() {
+    requestAnimationFrame(() => {
+      valueInputRef.current?.focus();
+      valueInputRef.current?.select();
+    });
+  }
+
+  useEffect(() => {
+    focusValueField();
+  }, []);
+
   async function handleSave() {
     if (!activeProfile || !value.trim()) return;
     setSaving(true);
@@ -91,6 +117,7 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
           recordedAt,
           note: note.trim() || undefined,
         });
+        resetNewEntry();
       } else {
         await addMeasurement({
           type,
@@ -98,11 +125,12 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
           recordedAt,
           note: note.trim() || undefined,
         });
+        setValue('');
+        setNote('');
+        setDate(new Date().toISOString().slice(0, 10));
+        setSaveError('');
       }
-      setShowAdd(false);
-      setEditId(null);
-      setValue('');
-      setNote('');
+      focusValueField();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Failed to save.');
     } finally {
@@ -114,6 +142,10 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
     if (!activeProfile) return;
     if (!confirm('Delete this entry?')) return;
     await deleteMeasurement(id);
+    if (editId === id) {
+      resetNewEntry();
+      focusValueField();
+    }
   }
 
   function startEdit(id: string) {
@@ -123,26 +155,81 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
     setValue(String(fromCanonical(type, entry.value, units)));
     setDate(entry.recordedAt.slice(0, 10));
     setNote(entry.note ?? '');
-    setShowAdd(true);
+    setSaveError('');
+    focusValueField();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-surface-700 bg-surface-900 p-6 shadow-2xl shadow-black/50">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">
+            <h2 className="text-xl font-bold text-slate-100">
               {MEASUREMENT_LABELS[type]} history
             </h2>
-            <p className="mt-1 text-sm text-slate-500">{tip}</p>
+            <p className="mt-1 text-sm text-slate-400">{tip}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-slate-500 hover:text-slate-700"
+            className="cursor-pointer rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-surface-800 hover:text-slate-200"
           >
             Close
           </button>
+        </div>
+
+        <div className="mb-4 rounded-xl border border-surface-700 bg-surface-800/50 p-4">
+          <h3 className="text-sm font-semibold text-slate-200">
+            {editId ? 'Edit entry' : 'New entry'}
+          </h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <input
+              ref={valueInputRef}
+              type="number"
+              step="0.1"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={`Value (${unitLabel(type, units)})`}
+              className="input rounded-lg px-3 py-2 ring-2 ring-brand-500/40"
+            />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="input rounded-lg px-3 py-2"
+            />
+          </div>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Note (optional)"
+            className="input mt-3 rounded-lg px-3 py-2 text-sm"
+          />
+          {saveError && (
+            <p className="mt-2 text-sm text-rose-400">{saveError}</p>
+          )}
+          <div className="mt-3 flex gap-2">
+            {editId && (
+              <button
+                type="button"
+                onClick={() => {
+                  resetNewEntry();
+                  focusValueField();
+                }}
+                className="btn-secondary rounded-lg px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || !value.trim()}
+              className="btn-primary rounded-lg px-4 py-2 text-sm"
+            >
+              {saving ? 'Saving…' : editId ? 'Update' : 'Save'}
+            </button>
+          </div>
         </div>
 
         <div className="mb-4 flex gap-2">
@@ -151,42 +238,31 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
               key={r}
               type="button"
               onClick={() => setRange(r)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+              className={`cursor-pointer rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 range === r
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-slate-100 text-slate-600'
+                  ? 'bg-brand-500 text-surface-950'
+                  : 'bg-surface-800 text-slate-400 hover:bg-surface-700 hover:text-slate-200'
               }`}
             >
               {r === 'all' ? 'All' : `${r}d`}
             </button>
           ))}
-          <button
-            type="button"
-            onClick={() => {
-              setShowAdd(true);
-              setEditId(null);
-              setValue('');
-              setNote('');
-              setDate(new Date().toISOString().slice(0, 10));
-            }}
-            className="ml-auto rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white"
-          >
-            Add entry
-          </button>
         </div>
 
         {chartData.length > 1 ? (
           <div className="mb-6 h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#233049" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} stroke="#334155" />
                 <YAxis
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  stroke="#334155"
                   domain={['auto', 'auto']}
                   unit={` ${unitLabel(type, units)}`}
                 />
                 <Tooltip
+                  contentStyle={CHART_TOOLTIP_STYLE}
                   formatter={(v: number) => [
                     `${v} ${unitLabel(type, units)}`,
                     MEASUREMENT_LABELS[type],
@@ -195,9 +271,9 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
                 <Line
                   type="monotone"
                   dataKey="value"
-                  stroke="#16a34a"
+                  stroke="#34d399"
                   strokeWidth={2}
-                  dot={{ r: 3 }}
+                  dot={{ r: 3, fill: '#34d399', stroke: '#34d399' }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -210,85 +286,34 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
 
         {isGrowthChart && growthData.length > 1 && (
           <div className="mb-6">
-            <h3 className="mb-2 text-sm font-semibold text-slate-700">
+            <h3 className="mb-2 text-sm font-semibold text-slate-300">
               Growth chart (height vs age)
             </h3>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={growthData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#233049" />
                   <XAxis
                     dataKey="age"
-                    tick={{ fontSize: 11 }}
-                    label={{ value: 'Age (years)', position: 'insideBottom', offset: -5 }}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    stroke="#334155"
+                    label={{ value: 'Age (years)', position: 'insideBottom', offset: -5, fill: '#94a3b8' }}
                   />
                   <YAxis
-                    tick={{ fontSize: 11 }}
+                    tick={{ fontSize: 11, fill: '#94a3b8' }}
+                    stroke="#334155"
                     unit={` ${unitLabel(type, units)}`}
                   />
-                  <Tooltip />
+                  <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#2563eb"
+                    stroke="#60a5fa"
                     strokeWidth={2}
-                    dot={{ r: 3 }}
+                    dot={{ r: 3, fill: '#60a5fa', stroke: '#60a5fa' }}
                   />
                 </LineChart>
               </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {showAdd && (
-          <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="text-sm font-semibold text-slate-800">
-              {editId ? 'Edit entry' : 'New entry'}
-            </h3>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <input
-                type="number"
-                step="0.1"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={`Value (${unitLabel(type, units)})`}
-                className="rounded-lg border border-slate-200 px-3 py-2"
-              />
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="rounded-lg border border-slate-200 px-3 py-2"
-              />
-            </div>
-            <input
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Note (optional)"
-              className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-            />
-            {saveError && (
-              <p className="mt-2 text-sm text-red-600">{saveError}</p>
-            )}
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAdd(false);
-                  setEditId(null);
-                }}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-              >
-                {saving ? 'Saving…' : 'Save'}
-              </button>
             </div>
           </div>
         )}
@@ -297,10 +322,14 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
           {[...filtered].reverse().map((m) => (
             <div
               key={m.id}
-              className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"
+              className={`flex items-center justify-between rounded-xl border px-4 py-3 transition ${
+                editId === m.id
+                  ? 'border-brand-500/50 bg-brand-500/10'
+                  : 'border-surface-700 bg-surface-800/40'
+              }`}
             >
               <div>
-                <p className="font-semibold text-slate-900">
+                <p className="font-semibold text-slate-100">
                   {formatMeasurementValue(type, m.value, units)}
                 </p>
                 <p className="text-xs text-slate-500">
@@ -312,14 +341,14 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
                 <button
                   type="button"
                   onClick={() => startEdit(m.id)}
-                  className="text-xs font-medium text-brand-600"
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-brand-400 transition hover:bg-brand-500/10 hover:text-brand-300"
                 >
                   Edit
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDelete(m.id)}
-                  className="text-xs font-medium text-red-600"
+                  className="cursor-pointer rounded-md px-2 py-1 text-xs font-medium text-rose-400 transition hover:bg-rose-500/10 hover:text-rose-300"
                 >
                   Delete
                 </button>

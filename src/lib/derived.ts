@@ -1,4 +1,6 @@
-import type { Measurement, MeasurementType } from './types';
+import type { Measurement, MeasurementType, Sex } from './types';
+
+export type MetricStatus = 'healthy' | 'moderate' | 'bad';
 
 export interface DerivedMetric {
   key: string;
@@ -6,6 +8,39 @@ export interface DerivedMetric {
   value: number;
   formatted: string;
   hint?: string;
+  /** Undefined when adult thresholds don't apply (e.g. under-18 profiles). */
+  status?: MetricStatus;
+}
+
+export interface DerivedMetricsProfile {
+  sex: Sex;
+  birthDate: string;
+}
+
+function bmiStatus(bmi: number): MetricStatus {
+  if (bmi < 16 || bmi >= 30) return 'bad';
+  if (bmi < 18.5 || bmi >= 25) return 'moderate';
+  return 'healthy';
+}
+
+function whrStatus(ratio: number, sex: Sex): MetricStatus {
+  const [healthyBelow, badFrom] =
+    sex === 'male' ? [0.9, 1.0] : sex === 'female' ? [0.8, 0.85] : [0.85, 0.95];
+  if (ratio < healthyBelow) return 'healthy';
+  if (ratio >= badFrom) return 'bad';
+  return 'moderate';
+}
+
+function whtrStatus(ratio: number): MetricStatus {
+  if (ratio < 0.5) return 'healthy';
+  if (ratio >= 0.6) return 'bad';
+  return 'moderate';
+}
+
+function isAdult(birthDate: string): boolean {
+  const age =
+    (Date.now() - new Date(birthDate).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+  return age >= 18;
 }
 
 export function getLatestByType(
@@ -23,11 +58,15 @@ export function getLatestByType(
 
 export function computeDerivedMetrics(
   measurements: Measurement[],
+  profile?: DerivedMetricsProfile,
 ): DerivedMetric[] {
   const weight = getLatestByType(measurements, 'weight');
   const height = getLatestByType(measurements, 'height');
   const waist = getLatestByType(measurements, 'waist');
   const hips = getLatestByType(measurements, 'hips');
+
+  // Adult reference ranges don't apply to kids, so skip status for them.
+  const useAdultRanges = profile ? isAdult(profile.birthDate) : false;
 
   const derived: DerivedMetric[] = [];
 
@@ -39,7 +78,8 @@ export function computeDerivedMetrics(
       label: 'BMI',
       value: bmi,
       formatted: bmi.toFixed(1),
-      hint: 'Body mass index from latest weight and height.',
+      hint: 'Body mass index from latest weight and height. Healthy adult range: 18.5–24.9.',
+      status: useAdultRanges ? bmiStatus(bmi) : undefined,
     });
   }
 
@@ -50,7 +90,9 @@ export function computeDerivedMetrics(
       label: 'Waist-to-hip',
       value: ratio,
       formatted: ratio.toFixed(2),
-      hint: 'Ratio of latest waist and hip measurements.',
+      hint: 'Ratio of latest waist and hip measurements. Lower is generally healthier.',
+      status:
+        useAdultRanges && profile ? whrStatus(ratio, profile.sex) : undefined,
     });
   }
 
@@ -62,6 +104,7 @@ export function computeDerivedMetrics(
       value: ratio,
       formatted: ratio.toFixed(2),
       hint: 'Below 0.5 is often associated with lower health risk.',
+      status: useAdultRanges ? whtrStatus(ratio) : undefined,
     });
   }
 

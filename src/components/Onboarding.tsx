@@ -94,11 +94,13 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
       <div className="mb-6">
-        <p className="text-sm font-medium text-brand-600">Welcome to Fit</p>
-        <h2 className="mt-1 text-2xl font-bold text-slate-900">Set up your first profile</h2>
+        <p className="text-sm font-semibold uppercase tracking-widest text-brand-400">
+          Welcome to Fit
+        </p>
+        <h2 className="mt-1 text-2xl font-bold text-slate-100">Set up your first profile</h2>
         <p className="mt-1 text-sm text-slate-500">Step {step + 1} of 3</p>
         {!isGuest && user?.email && (
-          <p className="mt-2 text-sm text-brand-700">
+          <p className="mt-2 text-sm text-brand-300">
             Signed in as {user.email}
           </p>
         )}
@@ -110,57 +112,57 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             type="button"
             onClick={handleSignIn}
             disabled={signingIn}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-surface-700 bg-surface-800 py-3 text-sm font-semibold text-slate-100 shadow-sm transition hover:border-slate-500 hover:bg-surface-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <GoogleIcon />
             {signingIn ? 'Redirecting…' : 'Sign in with Google'}
           </button>
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
+              <div className="w-full border-t border-surface-700" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-slate-50 px-2 text-slate-500">or set up on this device</span>
+              <span className="bg-surface-950 px-2 text-slate-500">or set up on this device</span>
             </div>
           </div>
         </div>
       )}
 
       {error && step === 0 && isGuest && (
-        <p className="mb-4 text-sm text-red-600">{error}</p>
+        <p className="mb-4 text-sm text-rose-400">{error}</p>
       )}
       {authError && step === 0 && (
-        <p className="mb-4 text-sm text-red-600">{authError}</p>
+        <p className="mb-4 text-sm text-rose-400">{authError}</p>
       )}
 
       {step === 0 && (
         <div className="space-y-4">
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Units</span>
+            <span className="text-sm font-medium text-slate-300">Units</span>
             <select
               value={units}
               onChange={(e) => setUnitChoice(e.target.value as UnitSystem)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              className="input mt-1"
             >
               <option value="metric">Metric (kg, cm)</option>
               <option value="imperial">Imperial (lb, in)</option>
             </select>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Name</span>
+            <span className="text-sm font-medium text-slate-300">Name</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your name or child's name"
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              className="input mt-1"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Sex</span>
+            <span className="text-sm font-medium text-slate-300">Sex</span>
             <select
               value={sex}
               onChange={(e) => setSex(e.target.value as Sex)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              className="input mt-1"
             >
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -168,12 +170,12 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             </select>
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">Birth date</span>
+            <span className="text-sm font-medium text-slate-300">Birth date</span>
             <input
               type="date"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              className="input mt-1"
             />
             <p className="mt-1 text-xs text-slate-500">
               Used for growth charts — especially useful for kids.
@@ -183,7 +185,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             type="button"
             onClick={() => setStep(1)}
             disabled={!name.trim() || !birthDate}
-            className="w-full rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
+            className="btn-primary w-full py-3 text-sm"
           >
             Continue
           </button>
@@ -192,22 +194,22 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       {step === 1 && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-400">
             Choose which measurements to track. You can change these later.
           </p>
           <div className="space-y-2">
             {DEFAULT_ENABLED_MEASUREMENTS.map((type) => (
               <label
                 key={type}
-                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-surface-700 bg-surface-900/60 px-4 py-3 transition hover:border-brand-500/40 hover:bg-surface-800"
               >
                 <input
                   type="checkbox"
                   checked={enabled.includes(type)}
                   onChange={() => toggleMeasurement(type)}
-                  className="h-4 w-4 rounded border-slate-300 text-brand-600"
+                  className="h-4 w-4 rounded accent-brand-500"
                 />
-                <span className="text-sm font-medium">{MEASUREMENT_LABELS[type]}</span>
+                <span className="text-sm font-medium text-slate-200">{MEASUREMENT_LABELS[type]}</span>
               </label>
             ))}
           </div>
@@ -218,15 +220,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             {OPTIONAL_MEASUREMENTS.map((type) => (
               <label
                 key={type}
-                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+                className="flex cursor-pointer items-center gap-3 rounded-xl border border-surface-700 bg-surface-900/60 px-4 py-3 transition hover:border-brand-500/40 hover:bg-surface-800"
               >
                 <input
                   type="checkbox"
                   checked={enabled.includes(type)}
                   onChange={() => toggleMeasurement(type)}
-                  className="h-4 w-4 rounded border-slate-300 text-brand-600"
+                  className="h-4 w-4 rounded accent-brand-500"
                 />
-                <span className="text-sm font-medium">{MEASUREMENT_LABELS[type]}</span>
+                <span className="text-sm font-medium text-slate-200">{MEASUREMENT_LABELS[type]}</span>
               </label>
             ))}
           </div>
@@ -234,14 +236,14 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             <button
               type="button"
               onClick={() => setStep(0)}
-              className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700"
+              className="btn-secondary flex-1 py-3 text-sm"
             >
               Back
             </button>
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="flex-1 rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white"
+              className="btn-primary flex-1 py-3 text-sm"
             >
               Continue
             </button>
@@ -251,9 +253,9 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
       {step === 2 && (
         <div className="space-y-4">
-          <p className="text-sm text-slate-600">Optional goals to track progress.</p>
+          <p className="text-sm text-slate-400">Optional goals to track progress.</p>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-slate-300">
               Target weight ({units === 'metric' ? 'kg' : 'lb'})
             </span>
             <input
@@ -261,11 +263,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               step="0.1"
               value={targetWeight}
               onChange={(e) => setTargetWeight(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              className="input mt-1"
             />
           </label>
           <label className="block">
-            <span className="text-sm font-medium text-slate-700">
+            <span className="text-sm font-medium text-slate-300">
               Target waist ({units === 'metric' ? 'cm' : 'in'})
             </span>
             <input
@@ -273,15 +275,15 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               step="0.1"
               value={targetWaist}
               onChange={(e) => setTargetWaist(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5"
+              className="input mt-1"
             />
           </label>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-rose-400">{error}</p>}
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="flex-1 rounded-xl border border-slate-200 py-3 text-sm font-semibold text-slate-700"
+              className="btn-secondary flex-1 py-3 text-sm"
             >
               Back
             </button>
@@ -289,7 +291,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               type="button"
               onClick={finish}
               disabled={saving}
-              className="flex-1 rounded-xl bg-brand-600 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              className="btn-primary flex-1 py-3 text-sm"
             >
               {saving ? 'Saving…' : 'Get started'}
             </button>
