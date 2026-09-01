@@ -17,29 +17,16 @@ export function BodyDashboard() {
 
   const enabled = activeProfile.enabledMeasurements;
   const derived = computeDerivedMetrics(measurements, activeProfile);
-  const isKid =
-    new Date().getFullYear() - new Date(activeProfile.birthDate).getFullYear() < 18;
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={() => setShowWizard(true)}
-          className="btn-primary flex-1 py-3 text-sm"
-        >
-          Weekly check-in
-        </button>
-        {isKid && (
-          <button
-            type="button"
-            onClick={() => setSelectedType('height')}
-            className="btn-secondary px-4 py-3 text-sm text-brand-300"
-          >
-            Log height
-          </button>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={() => setShowWizard(true)}
+        className="btn-primary w-full py-3 text-sm"
+      >
+        Weekly check-in
+      </button>
 
       {derived.length > 0 && (
         <section>

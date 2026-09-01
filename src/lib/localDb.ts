@@ -19,7 +19,7 @@ export interface LocalStore {
 
 function emptyStore(): LocalStore {
   return {
-    prefs: { units: 'metric', activeProfileId: null },
+    prefs: { units: 'metric', activeProfileId: null, profileOrder: [] },
     profiles: [],
     measurements: {},
     habitDays: {},
@@ -33,7 +33,11 @@ export function loadLocalStore(): LocalStore {
     if (!raw) return emptyStore();
     const parsed = JSON.parse(raw) as LocalStore;
     return {
-      prefs: parsed.prefs ?? { units: 'metric', activeProfileId: null },
+      prefs: {
+        units: parsed.prefs?.units ?? 'metric',
+        activeProfileId: parsed.prefs?.activeProfileId ?? null,
+        profileOrder: parsed.prefs?.profileOrder ?? [],
+      },
       profiles: parsed.profiles ?? [],
       measurements: parsed.measurements ?? {},
       habitDays: parsed.habitDays ?? {},
@@ -94,6 +98,10 @@ export function createLocalProfile(data: Omit<Profile, 'id'>): string {
   store.profiles.push(profile);
   store.measurements[id] = [];
   store.habitDays[id] = [];
+  if (!store.prefs.profileOrder) store.prefs.profileOrder = [];
+  if (!store.prefs.profileOrder.includes(id)) {
+    store.prefs.profileOrder.push(id);
+  }
   if (!store.prefs.activeProfileId) {
     store.prefs.activeProfileId = id;
   }
@@ -117,6 +125,11 @@ export function deleteLocalProfile(profileId: string): void {
   store.profiles = store.profiles.filter((p) => p.id !== profileId);
   delete store.measurements[profileId];
   delete store.habitDays[profileId];
+  if (store.prefs.profileOrder) {
+    store.prefs.profileOrder = store.prefs.profileOrder.filter(
+      (id) => id !== profileId,
+    );
+  }
   if (store.prefs.activeProfileId === profileId) {
     store.prefs.activeProfileId = store.profiles[0]?.id ?? null;
   }

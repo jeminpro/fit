@@ -30,6 +30,7 @@ export function YouPage() {
     createProfile,
     updateProfile,
     deleteProfile,
+    reorderProfile,
     getProfileExportData,
   } = useApp();
 
@@ -212,7 +213,7 @@ export function YouPage() {
         </div>
 
         <div className="space-y-2">
-          {profiles.map((profile) => (
+          {profiles.map((profile, index) => (
             <div
               key={profile.id}
               className={`flex items-center justify-between rounded-xl border px-4 py-3 transition ${
@@ -221,11 +222,57 @@ export function YouPage() {
                   : 'border-surface-700 bg-surface-900/60'
               }`}
             >
-              <div>
-                <p className="font-semibold text-slate-100">{profile.name}</p>
-                <p className="text-xs text-slate-500">
-                  Born {profile.birthDate} · {profile.sex}
-                </p>
+              <div className="flex min-w-0 items-center gap-2">
+                {profiles.length > 1 && (
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => reorderProfile(profile.id, 'up')}
+                      disabled={index === 0}
+                      aria-label={`Move ${profile.name} up`}
+                      className="cursor-pointer rounded p-0.5 text-slate-500 transition hover:bg-surface-700 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M10 5l-5 5h10l-5-5z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => reorderProfile(profile.id, 'down')}
+                      disabled={index === profiles.length - 1}
+                      aria-label={`Move ${profile.name} down`}
+                      className="cursor-pointer rounded p-0.5 text-slate-500 transition hover:bg-surface-700 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <svg
+                        className="h-3.5 w-3.5"
+                        viewBox="0 0 20 20"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M10 15l5-5H5l5 5z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-100">{profile.name}</p>
+                  <p className="text-xs text-slate-500">
+                    Born {profile.birthDate} · {profile.sex}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-1">
                 {activeProfile?.id !== profile.id && (

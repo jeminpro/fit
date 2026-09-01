@@ -21,6 +21,14 @@ export function formatShortDate(iso: string): string {
   return format(parseISO(iso), 'MMM d');
 }
 
+export function formatDayLabel(dayKey: string): string {
+  const today = todayKey();
+  const yesterday = todayKey(subDays(new Date(), 1));
+  if (dayKey === today) return 'Today';
+  if (dayKey === yesterday) return 'Yesterday';
+  return formatDisplayDate(dayKey);
+}
+
 export function daysSince(iso: string): number {
   return differenceInDays(new Date(), parseISO(iso));
 }

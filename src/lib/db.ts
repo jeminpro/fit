@@ -49,21 +49,31 @@ function habitDaysRef(uid: string, profileId: string) {
   return collection(getDb(), 'users', uid, 'profiles', profileId, 'habitDays');
 }
 
-export async function getUserPrefs(uid: string): Promise<UserPrefs | null> {
-  const snap = await getDoc(userRef(uid));
-  if (!snap.exists()) return null;
-  const data = snap.data();
+function parseUserPrefs(data: Record<string, unknown>): UserPrefs {
   return {
     units: (data.units as UnitSystem) ?? 'metric',
     activeProfileId: (data.activeProfileId as string | null) ?? null,
+    profileOrder: Array.isArray(data.profileOrder)
+      ? (data.profileOrder as string[])
+      : undefined,
   };
+}
+
+export async function getUserPrefs(uid: string): Promise<UserPrefs | null> {
+  const snap = await getDoc(userRef(uid));
+  if (!snap.exists()) return null;
+  return parseUserPrefs(snap.data());
 }
 
 export async function ensureUserPrefs(uid: string): Promise<UserPrefs> {
   const existing = await getUserPrefs(uid);
   if (existing) return existing;
 
-  const prefs: UserPrefs = { units: 'metric', activeProfileId: null };
+  const prefs: UserPrefs = {
+    units: 'metric',
+    activeProfileId: null,
+    profileOrder: [],
+  };
   await setDoc(userRef(uid), prefs, { merge: true });
   return prefs;
 }
@@ -91,15 +101,15 @@ export function subscribeUserPrefs(
     userRef(uid),
     (snap) => {
       if (snap.exists()) {
-        const data = snap.data();
-        callback({
-          units: (data.units as UnitSystem) ?? 'metric',
-          activeProfileId: (data.activeProfileId as string | null) ?? null,
-        });
+        callback(parseUserPrefs(snap.data()));
         return;
       }
 
-      const defaults: UserPrefs = { units: 'metric', activeProfileId: null };
+      const defaults: UserPrefs = {
+        units: 'metric',
+        activeProfileId: null,
+        profileOrder: [],
+      };
       void setDoc(userRef(uid), defaults, { merge: true });
       callback(defaults);
     },

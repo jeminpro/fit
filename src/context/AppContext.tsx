@@ -49,6 +49,13 @@ import {
   clearLocalStore,
 } from '../lib/localDb';
 import { migrateLocalToFirebase } from '../lib/migrate';
+import {
+  sortProfilesByOrder,
+  normalizeProfileOrder,
+  moveProfileInOrder,
+  appendToProfileOrder,
+  removeFromProfileOrder,
+} from '../lib/profileOrder';
 import type {
   UserPrefs,
   Profile,
@@ -89,6 +96,7 @@ interface AppContextValue {
     updates: Partial<Omit<Profile, 'id'>>,
   ) => Promise<void>;
   deleteProfile: (profileId: string) => Promise<void>;
+  reorderProfile: (profileId: string, direction: 'up' | 'down') => Promise<void>;
   addMeasurement: (input: MeasurementInput) => Promise<string>;
   addMeasurementsBatch: (inputs: MeasurementInput[]) => Promise<void>;
   updateMeasurement: (
@@ -234,10 +242,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  const orderedProfiles = useMemo(
+    () => sortProfilesByOrder(profiles, prefs?.profileOrder),
+    [profiles, prefs?.profileOrder],
+  );
+
   const activeProfile = useMemo(() => {
-    if (!prefs?.activeProfileId) return profiles[0] ?? null;
-    return profiles.find((p) => p.id === prefs.activeProfileId) ?? profiles[0] ?? null;
-  }, [prefs, profiles]);
+    if (!prefs?.activeProfileId) return orderedProfiles[0] ?? null;
+    return (
+      orderedProfiles.find((p) => p.id === prefs.activeProfileId) ??
+      orderedProfiles[0] ??
+      null
+    );
+  }, [prefs, orderedProfiles]);
 
   useEffect(() => {
     if (user && activeProfile) {
@@ -266,16 +283,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [user, isGuest, activeProfile?.id, refreshGuestData]);
 
   useEffect(() => {
-    if (!user || !prefs?.activeProfileId || profiles.length === 0) return;
-    const exists = profiles.some((p) => p.id === prefs.activeProfileId);
-    if (!exists && profiles[0]) {
-      updateUserPrefs(user.uid, { activeProfileId: profiles[0].id }).then(() => {
+    if (!user || !prefs?.activeProfileId || orderedProfiles.length === 0) return;
+    const exists = orderedProfiles.some((p) => p.id === prefs.activeProfileId);
+    if (!exists && orderedProfiles[0]) {
+      updateUserPrefs(user.uid, { activeProfileId: orderedProfiles[0].id }).then(() => {
         setPrefs((prev) =>
-          prev ? { ...prev, activeProfileId: profiles[0]!.id } : prev,
+          prev ? { ...prev, activeProfileId: orderedProfiles[0]!.id } : prev,
         );
       });
     }
-  }, [user, prefs?.activeProfileId, profiles]);
+  }, [user, prefs?.activeProfileId, orderedProfiles]);
 
   const habitDaysMap = useMemo(
     () => new Map(habitDays.map((d) => [d.id, d])),
@@ -327,29 +344,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!user) refreshGuestData();
   }
 
+  async function persistProfileOrder(order: string[]) {
+    if (user) {
+      await updateUserPrefs(user.uid, { profileOrder: order });
+      setPrefs((prev) => (prev ? { ...prev, profileOrder: order } : prev));
+    } else {
+      const next = updateLocalPrefs({ profileOrder: order });
+      setPrefs(next);
+    }
+  }
+
   async function setupInitialProfile(
     data: Omit<Profile, 'id'>,
     units: UnitSystem,
   ): Promise<string> {
     if (user) {
       const profileId = await createRemoteProfile(user.uid, data);
-      await updateUserPrefs(user.uid, { units, activeProfileId: profileId });
+      await updateUserPrefs(user.uid, {
+        units,
+        activeProfileId: profileId,
+        profileOrder: [profileId],
+      });
       const profile: Profile = { id: profileId, ...data };
       setProfiles([profile]);
-      setPrefs({ units, activeProfileId: profileId });
+      setPrefs({ units, activeProfileId: profileId, profileOrder: [profileId] });
       return profileId;
     }
 
     updateLocalPrefs({ units });
     const profileId = createLocalProfile(data);
-    updateLocalPrefs({ activeProfileId: profileId });
+    updateLocalPrefs({ activeProfileId: profileId, profileOrder: [profileId] });
     refreshGuestData();
     return profileId;
   }
 
   async function createProfile(data: Omit<Profile, 'id'>) {
     if (user) {
-      return createRemoteProfile(user.uid, data);
+      const id = await createRemoteProfile(user.uid, data);
+      const order = appendToProfileOrder(
+        normalizeProfileOrder(profiles, prefs?.profileOrder),
+        id,
+      );
+      await persistProfileOrder(order);
+      return id;
     }
     const id = createLocalProfile(data);
     refreshGuestData();
@@ -369,12 +406,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function deleteProfile(profileId: string) {
+    const order = removeFromProfileOrder(
+      normalizeProfileOrder(profiles, prefs?.profileOrder),
+      profileId,
+    );
     if (user) {
       await deleteRemoteProfile(user.uid, profileId);
+      await persistProfileOrder(order);
     } else {
       deleteLocalProfile(profileId);
       refreshGuestData();
     }
+  }
+
+  async function reorderProfile(profileId: string, direction: 'up' | 'down') {
+    const currentOrder = normalizeProfileOrder(profiles, prefs?.profileOrder);
+    const newOrder = moveProfileInOrder(currentOrder, profileId, direction);
+    if (newOrder.join() === currentOrder.join()) return;
+    await persistProfileOrder(newOrder);
   }
 
   async function addMeasurement(input: MeasurementInput) {
@@ -449,7 +498,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     migrating,
     firebaseReady,
     prefs,
-    profiles,
+    profiles: orderedProfiles,
     activeProfile,
     measurements,
     habitDays,
@@ -466,6 +515,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     createProfile,
     updateProfile,
     deleteProfile,
+    reorderProfile,
     addMeasurement,
     addMeasurementsBatch,
     updateMeasurement,

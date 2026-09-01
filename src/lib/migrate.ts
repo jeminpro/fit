@@ -8,6 +8,7 @@ import {
 import type { LocalStore } from './localDb';
 import { clearLocalStore } from './localDb';
 import { stripUndefined } from './async';
+import { normalizeProfileOrder } from './profileOrder';
 import type { HabitDayInput } from './types';
 
 export async function migrateLocalToFirebase(
@@ -56,10 +57,19 @@ export async function migrateLocalToFirebase(
     ? profileIdMap.get(activeLocalId) ?? null
     : null;
 
+  const localOrder = normalizeProfileOrder(
+    store.profiles,
+    store.prefs.profileOrder,
+  );
+  const remoteOrder = localOrder
+    .map((id) => profileIdMap.get(id))
+    .filter((id): id is string => id !== undefined);
+
   await ensureUserPrefs(uid);
   await updateUserPrefs(uid, {
     units: store.prefs.units,
     activeProfileId: activeRemoteId,
+    profileOrder: remoteOrder,
   });
 
   clearLocalStore();

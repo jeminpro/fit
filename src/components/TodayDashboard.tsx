@@ -1,8 +1,15 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { HABIT_KEYS } from '../lib/constants';
-import { todayKey, habitScore, computeHabitStreak } from '../lib/dates';
-import { subDays, format } from 'date-fns';
+import {
+  todayKey,
+  habitScore,
+  computeHabitStreak,
+  formatDisplayDate,
+  formatDayLabel,
+  daysSince,
+} from '../lib/dates';
+import { subDays, addDays, format, parseISO } from 'date-fns';
 import { HabitRow } from './HabitRow';
 import { DerivedMetricCard } from './DerivedMetricCard';
 import {
@@ -11,7 +18,6 @@ import {
   computeDerivedMetrics,
 } from '../lib/derived';
 import { formatMeasurementValue, formatDelta } from '../lib/units';
-import { daysSince } from '../lib/dates';
 
 const base = import.meta.env.BASE_URL;
 
@@ -19,15 +25,28 @@ export function TodayDashboard() {
   const { activeProfile, measurements, habitDaysMap, prefs } = useApp();
   const units = prefs?.units ?? 'metric';
   const today = todayKey();
-  const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+  const [selectedDay, setSelectedDay] = useState(today);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setSelectedDay(todayKey());
+  }, [activeProfile?.id]);
+
   const todayHabits = habitDaysMap.get(today);
-  const yesterdayHabits = habitDaysMap.get(yesterday);
+  const selectedHabits = habitDaysMap.get(selectedDay);
+  const previousDay = format(subDays(parseISO(selectedDay), 1), 'yyyy-MM-dd');
+  const previousDayHabits = habitDaysMap.get(previousDay);
+  const isToday = selectedDay === today;
 
   const score = habitScore(todayHabits);
   const streak = computeHabitStreak(habitDaysMap);
   const completedToday = HABIT_KEYS.filter(
     (k) => todayHabits?.[k] !== undefined,
   ).length;
+
+  const habitsTitle = isToday
+    ? "Today's habits"
+    : `Habits for ${formatDisplayDate(selectedDay)}`;
 
   const latestWeight = getLatestByType(measurements, 'weight');
   const weekAgoWeight = findMeasurementDaysAgo(measurements, 'weight', 7);
@@ -59,6 +78,30 @@ export function TodayDashboard() {
     measurements,
     activeProfile ?? undefined,
   );
+
+  function goPrevDay() {
+    setSelectedDay(
+      format(subDays(parseISO(selectedDay), 1), 'yyyy-MM-dd'),
+    );
+  }
+
+  function goNextDay() {
+    if (isToday) return;
+    const next = format(addDays(parseISO(selectedDay), 1), 'yyyy-MM-dd');
+    if (next <= today) {
+      setSelectedDay(next);
+    }
+  }
+
+  function openDatePicker() {
+    const input = dateInputRef.current;
+    if (!input) return;
+    if (typeof input.showPicker === 'function') {
+      input.showPicker();
+    } else {
+      input.click();
+    }
+  }
 
   if (!activeProfile) return null;
 
@@ -150,19 +193,77 @@ export function TodayDashboard() {
       )}
 
       <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-300">
-            Today&apos;s habits
-          </h3>
-          <span className="text-xs text-slate-500">{today}</span>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-slate-300">{habitsTitle}</h3>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={goPrevDay}
+              aria-label="Previous day"
+              className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition hover:bg-surface-800 hover:text-slate-200"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12.5 15l-5-5 5-5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={openDatePicker}
+              className="cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-slate-300 transition hover:bg-surface-800 hover:text-brand-400"
+            >
+              {formatDayLabel(selectedDay)}
+            </button>
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={selectedDay}
+              max={today}
+              onChange={(e) => {
+                if (e.target.value) setSelectedDay(e.target.value);
+              }}
+              className="pointer-events-none absolute opacity-0"
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+            <button
+              type="button"
+              onClick={goNextDay}
+              disabled={isToday}
+              aria-label="Next day"
+              className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition hover:bg-surface-800 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M7.5 5l5 5-5 5" />
+              </svg>
+            </button>
+          </div>
         </div>
         <div className="space-y-3">
           {HABIT_KEYS.map((key) => (
             <HabitRow
               key={key}
               habitKey={key}
-              value={todayHabits?.[key]}
-              yesterdayValue={yesterdayHabits?.[key]}
+              dayId={selectedDay}
+              value={selectedHabits?.[key]}
+              previousDayValue={previousDayHabits?.[key]}
             />
           ))}
         </div>

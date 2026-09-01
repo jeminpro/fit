@@ -2,18 +2,22 @@ import { useState } from 'react';
 import type { HabitKey, HabitLevel } from '../lib/types';
 import { HABIT_LABELS, HABIT_LEVEL_LABELS } from '../lib/constants';
 import { useApp } from '../context/AppContext';
-import { todayKey } from '../lib/dates';
 
 interface HabitRowProps {
   habitKey: HabitKey;
+  dayId: string;
   value?: HabitLevel;
-  yesterdayValue?: HabitLevel;
+  previousDayValue?: HabitLevel;
 }
 
-export function HabitRow({ habitKey, value, yesterdayValue }: HabitRowProps) {
+export function HabitRow({
+  habitKey,
+  dayId,
+  value,
+  previousDayValue,
+}: HabitRowProps) {
   const { activeProfile, upsertHabitDay } = useApp();
   const [saving, setSaving] = useState(false);
-  const dayId = todayKey();
 
   async function setLevel(level: HabitLevel) {
     if (!activeProfile || saving) return;
@@ -33,13 +37,13 @@ export function HabitRow({ habitKey, value, yesterdayValue }: HabitRowProps) {
         <span className="text-sm font-semibold text-slate-200">
           {HABIT_LABELS[habitKey]}
         </span>
-        {yesterdayValue !== undefined && value === undefined && (
+        {previousDayValue !== undefined && value === undefined && (
           <button
             type="button"
-            onClick={() => setLevel(yesterdayValue)}
+            onClick={() => setLevel(previousDayValue)}
             className="cursor-pointer text-xs font-medium text-brand-400 transition hover:text-brand-300"
           >
-            Same as yesterday
+            Same as previous day
           </button>
         )}
       </div>

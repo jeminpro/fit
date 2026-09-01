@@ -19,6 +19,7 @@ export type HabitLevel = 0 | 1 | 2;
 export interface UserPrefs {
   units: UnitSystem;
   activeProfileId: string | null;
+  profileOrder?: string[];
 }
 
 export interface ProfileGoals {
