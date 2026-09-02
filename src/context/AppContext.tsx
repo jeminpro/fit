@@ -69,7 +69,7 @@ import type {
   HabitDayInput,
   MeasurementInput,
 } from '../lib/types';
-import type { WorkoutDay, WorkoutDayInput } from '../lib/workoutTypes';
+import type { WorkoutDay, WorkoutDayInput, Routine, WeeklyPlan } from '../lib/workoutTypes';
 
 const MAX_RECENT_EXERCISES = 20;
 
@@ -117,6 +117,8 @@ interface AppContextValue {
   upsertWorkoutDay: (dayId: string, input: WorkoutDayInput) => Promise<void>;
   pushRecentExercises: (exerciseIds: string[]) => Promise<void>;
   toggleFavouriteExercise: (exerciseId: string) => Promise<void>;
+  saveRoutines: (routines: Routine[]) => Promise<void>;
+  saveWeeklyPlan: (weeklyPlan: WeeklyPlan) => Promise<void>;
   getProfileExportData: (
     profile: Profile,
   ) => Promise<{
@@ -557,6 +559,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await updateProfile(activeProfile.id, { favouriteExerciseIds: next });
   }
 
+  async function saveRoutines(routines: Routine[]) {
+    if (!activeProfile) return;
+    await updateProfile(activeProfile.id, { routines });
+  }
+
+  async function saveWeeklyPlan(weeklyPlan: WeeklyPlan) {
+    if (!activeProfile) return;
+    await updateProfile(activeProfile.id, { weeklyPlan });
+  }
+
   async function getProfileExportData(profile: Profile) {
     if (user) {
       return exportProfileData(user.uid, profile);
@@ -599,6 +611,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     upsertWorkoutDay,
     pushRecentExercises,
     toggleFavouriteExercise,
+    saveRoutines,
+    saveWeeklyPlan,
     getProfileExportData,
   };
 

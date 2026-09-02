@@ -27,6 +27,8 @@ export async function migrateLocalToFirebase(
       goals: profile.goals,
       recentExerciseIds: profile.recentExerciseIds,
       favouriteExerciseIds: profile.favouriteExerciseIds,
+      routines: profile.routines,
+      weeklyPlan: profile.weeklyPlan,
     });
     profileIdMap.set(profile.id, newId);
 

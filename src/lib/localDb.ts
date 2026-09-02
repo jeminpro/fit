@@ -99,6 +99,10 @@ export function createLocalProfile(data: Omit<Profile, 'id'>): string {
         ? data.enabledMeasurements
         : DEFAULT_ENABLED_MEASUREMENTS,
     goals: data.goals ?? {},
+    recentExerciseIds: data.recentExerciseIds,
+    favouriteExerciseIds: data.favouriteExerciseIds,
+    routines: data.routines,
+    weeklyPlan: data.weeklyPlan,
   };
   store.profiles.push(profile);
   store.measurements[id] = [];
@@ -237,6 +241,10 @@ export function upsertLocalWorkoutDay(
     else if (cleaned.completedAt !== undefined) existing.completedAt = cleaned.completedAt;
     if (cleaned.note === null) delete existing.note;
     else if (cleaned.note !== undefined) existing.note = cleaned.note;
+    if (cleaned.routineId === null) delete existing.routineId;
+    else if (cleaned.routineId !== undefined) existing.routineId = cleaned.routineId;
+    if (cleaned.routineName === null) delete existing.routineName;
+    else if (cleaned.routineName !== undefined) existing.routineName = cleaned.routineName;
   } else {
     const day: WorkoutDay = {
       id: dayId,
@@ -244,6 +252,8 @@ export function upsertLocalWorkoutDay(
     };
     if (cleaned.completedAt) day.completedAt = cleaned.completedAt;
     if (cleaned.note) day.note = cleaned.note;
+    if (cleaned.routineId) day.routineId = cleaned.routineId;
+    if (cleaned.routineName) day.routineName = cleaned.routineName;
     store.workoutDays[profileId].push(day);
   }
   saveLocalStore(store);

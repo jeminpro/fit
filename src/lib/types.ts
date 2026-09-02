@@ -1,3 +1,5 @@
+import type { Routine, WeeklyPlan } from './workoutTypes';
+
 export type UnitSystem = 'metric' | 'imperial';
 export type Sex = 'male' | 'female' | 'other';
 export type MeasurementType =
@@ -34,6 +36,8 @@ export interface Profile {
   goals: ProfileGoals;
   recentExerciseIds?: string[];
   favouriteExerciseIds?: string[];
+  routines?: Routine[];
+  weeklyPlan?: WeeklyPlan;
 }
 
 export interface Measurement {

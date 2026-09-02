@@ -9,12 +9,22 @@ import {
 } from '../lib/exerciseCatalog';
 import { formatDayLabel, todayKey } from '../lib/dates';
 import {
+  MAX_ROUTINES,
   dayProgress,
   daySetCounts,
   emptyLog,
   type DayProgress,
+  type Routine,
+  type WorkoutDay,
   type WorkoutEntry,
 } from '../lib/workoutTypes';
+import {
+  clearRoutineFromPlan,
+  cloneEntries,
+  recentWorkoutDays,
+  resolveDay,
+  toPlannedExercise,
+} from '../lib/workoutPlan';
 import { WeekStrip } from './WeekStrip';
 import { WorkoutExerciseRow } from './WorkoutExerciseRow';
 import { ExercisePicker } from './ExercisePicker';
@@ -22,6 +32,9 @@ import {
   ExerciseDetailSheet,
   type ExercisePlanDraft,
 } from './ExerciseDetailSheet';
+import { CopyWorkoutSheet } from './CopyWorkoutSheet';
+import { RoutineSheet } from './RoutineSheet';
+import { WeeklyPlanSheet } from './WeeklyPlanSheet';
 
 function newUid(): string {
   return crypto.randomUUID();
@@ -49,10 +62,14 @@ export function WorkoutPage() {
     upsertWorkoutDay,
     pushRecentExercises,
     toggleFavouriteExercise,
+    saveRoutines,
+    saveWeeklyPlan,
   } = useApp();
 
   const units = prefs?.units ?? 'metric';
   const today = todayKey();
+  const routines = activeProfile?.routines ?? [];
+  const weeklyPlan = activeProfile?.weeklyPlan;
 
   const [weekStart, setWeekStart] = useState(() =>
     todayKey(startOfWeek(new Date(), { weekStartsOn: 1 })),
@@ -62,6 +79,9 @@ export function WorkoutPage() {
   const [catalogError, setCatalogError] = useState('');
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [routineOpen, setRoutineOpen] = useState(false);
+  const [weekPlanOpen, setWeekPlanOpen] = useState(false);
   const [detailExercise, setDetailExercise] = useState<ExerciseIndexItem | null>(null);
   const [editingEntryUid, setEditingEntryUid] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -95,24 +115,51 @@ export function WorkoutPage() {
     return map;
   }, [catalog]);
 
-  const day = workoutDaysMap.get(selectedDay) ?? null;
+  const resolved = useMemo(
+    () =>
+      resolveDay(
+        selectedDay,
+        workoutDaysMap.get(selectedDay),
+        routines,
+        weeklyPlan,
+      ),
+    [selectedDay, workoutDaysMap, routines, weeklyPlan],
+  );
+
+  const day = resolved.day;
   const entries = day?.entries ?? [];
   const counts = daySetCounts(day);
   const progress = dayProgress(day);
+  const hasEntries = entries.length > 0;
+
+  const previousDays = useMemo(
+    () => recentWorkoutDays(workoutDaysMap, selectedDay),
+    [workoutDaysMap, selectedDay],
+  );
 
   const progressByDay = useMemo(() => {
     const start = startOfWeek(parseISO(weekStart), { weekStartsOn: 1 });
     const map: Record<string, DayProgress> = {};
     for (let i = 0; i < 7; i++) {
       const key = todayKey(addDays(start, i));
-      map[key] = dayProgress(workoutDaysMap.get(key));
+      const resolvedDay = resolveDay(
+        key,
+        workoutDaysMap.get(key),
+        routines,
+        weeklyPlan,
+      );
+      map[key] = dayProgress(resolvedDay.day);
     }
     return map;
-  }, [weekStart, workoutDaysMap]);
+  }, [weekStart, workoutDaysMap, routines, weeklyPlan]);
 
   async function persistEntries(
     nextEntries: WorkoutEntry[],
-    extras?: { completedAt?: string | null },
+    extras?: {
+      completedAt?: string | null;
+      routineId?: string | null;
+      routineName?: string | null;
+    },
   ) {
     if (!activeProfile) return;
     setSaving(true);
@@ -123,11 +170,20 @@ export function WorkoutPage() {
         dayProgress({ id: selectedDay, entries: nextEntries }) === 'complete';
       await upsertWorkoutDay(selectedDay, {
         entries: nextEntries,
-        completedAt: extras?.completedAt !== undefined
-          ? extras.completedAt
-          : allDone
-            ? new Date().toISOString()
-            : null,
+        completedAt:
+          extras?.completedAt !== undefined
+            ? extras.completedAt
+            : allDone
+              ? new Date().toISOString()
+              : null,
+        routineId:
+          extras?.routineId !== undefined
+            ? extras.routineId
+            : (day?.routineId ?? null),
+        routineName:
+          extras?.routineName !== undefined
+            ? extras.routineName
+            : (day?.routineName ?? null),
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save workout.';
@@ -145,6 +201,11 @@ export function WorkoutPage() {
     }
   }
 
+  function confirmReplace(): boolean {
+    if (!hasEntries) return true;
+    return confirm('Replace the exercises planned for this day?');
+  }
+
   async function addExercises(selected: ExerciseIndexItem[]) {
     try {
       const next = [...entries, ...selected.map((ex) => makeEntry(ex))];
@@ -154,6 +215,57 @@ export function WorkoutPage() {
     } catch {
       setPickerOpen(false);
     }
+  }
+
+  async function copyDay(source: WorkoutDay) {
+    if (!confirmReplace()) return;
+    try {
+      await persistEntries(cloneEntries(source.entries), {
+        completedAt: null,
+        routineId: source.routineId ?? null,
+        routineName: source.routineName ?? null,
+      });
+      setCopyOpen(false);
+    } catch {
+      setCopyOpen(false);
+    }
+  }
+
+  async function applyRoutine(routine: Routine) {
+    if (!confirmReplace()) return;
+    try {
+      await persistEntries(cloneEntries(routine.exercises), {
+        completedAt: null,
+        routineId: routine.id,
+        routineName: routine.name,
+      });
+      setRoutineOpen(false);
+    } catch {
+      setRoutineOpen(false);
+    }
+  }
+
+  async function saveCurrentAsRoutine(name: string) {
+    if (!hasEntries) return;
+    const routine: Routine = {
+      id: newUid(),
+      name,
+      exercises: entries.map(toPlannedExercise),
+    };
+    await saveRoutines([routine, ...routines].slice(0, MAX_ROUTINES));
+  }
+
+  async function renameRoutine(routineId: string, name: string) {
+    await saveRoutines(
+      routines.map((routine) =>
+        routine.id === routineId ? { ...routine, name } : routine,
+      ),
+    );
+  }
+
+  async function deleteRoutine(routineId: string) {
+    await saveRoutines(routines.filter((routine) => routine.id !== routineId));
+    await saveWeeklyPlan(clearRoutineFromPlan(weeklyPlan, routineId));
   }
 
   async function toggleSet(entryUid: string, setIndex: number) {
@@ -243,6 +355,7 @@ export function WorkoutPage() {
   const dayLabel = formatDayLabel(selectedDay);
   const favouriteIds = activeProfile.favouriteExerciseIds ?? [];
   const recentIds = activeProfile.recentExerciseIds ?? [];
+  const routineName = day?.routineName;
 
   let primaryActionLabel = 'Add exercises';
   if (entries.length > 0 && progress === 'empty') primaryActionLabel = 'Add exercises';
@@ -252,11 +365,20 @@ export function WorkoutPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold text-slate-100">Workout</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Plan exercises for any day and tick off sets as you go.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-100">Workout</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Plan exercises for any day and tick off sets as you go.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-secondary shrink-0 px-3 py-2 text-xs"
+          onClick={() => setWeekPlanOpen(true)}
+        >
+          Edit week plan
+        </button>
       </div>
 
       <WeekStrip
@@ -270,9 +392,13 @@ export function WorkoutPage() {
       <section className="card p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-base font-semibold text-slate-100">{dayLabel}</h3>
+            <h3 className="text-base font-semibold text-slate-100">
+              {dayLabel}
+              {routineName ? ` · ${routineName}` : ''}
+            </h3>
             <p className="mt-0.5 text-xs text-slate-400">
               {format(parseISO(selectedDay), 'EEEE, MMM d')}
+              {resolved.derived ? ' · from week plan' : ''}
             </p>
           </div>
           <div className="text-right">
@@ -283,25 +409,41 @@ export function WorkoutPage() {
           </div>
         </div>
 
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             className="btn-primary flex-1 px-3 py-2.5 text-sm"
             onClick={() => setPickerOpen(true)}
             disabled={catalogLoading || Boolean(catalogError)}
           >
-            {entries.length === 0 ? 'Add exercises' : 'Add more'}
+            {hasEntries ? 'Add more' : 'Add exercises'}
           </button>
-          {entries.length > 0 && progress === 'complete' && (
+          {hasEntries && progress === 'complete' && (
             <span className="inline-flex items-center rounded-xl border border-brand-500/40 bg-brand-500/10 px-3 text-xs font-semibold text-brand-300">
               Done
             </span>
           )}
         </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-secondary flex-1 px-3 py-2 text-xs"
+            onClick={() => setCopyOpen(true)}
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            className="btn-secondary flex-1 px-3 py-2 text-xs"
+            onClick={() => setRoutineOpen(true)}
+          >
+            {hasEntries ? 'Routines' : 'Use routine'}
+          </button>
+        </div>
         {saving && (
           <p className="mt-2 text-xs text-slate-500">Saving…</p>
         )}
-        {entries.length > 0 && progress !== 'complete' && (
+        {hasEntries && progress !== 'complete' && (
           <p className="mt-2 text-xs text-slate-500">{primaryActionLabel}</p>
         )}
       </section>
@@ -316,11 +458,11 @@ export function WorkoutPage() {
         <p className="text-center text-sm text-slate-500">Loading exercise catalog…</p>
       )}
 
-      {!catalogLoading && entries.length === 0 && (
+      {!catalogLoading && !hasEntries && (
         <div className="card p-6 text-center">
           <p className="text-sm text-slate-300">No exercises planned for this day.</p>
           <p className="mt-1 text-xs text-slate-500">
-            Tap Add exercises to browse the catalog and set sets & reps.
+            Add from the catalog, copy a previous day, or apply a routine.
           </p>
         </div>
       )}
@@ -352,6 +494,37 @@ export function WorkoutPage() {
             setEditingEntryUid(null);
             setDetailExercise(ex);
           }}
+        />
+      )}
+
+      {copyOpen && (
+        <CopyWorkoutSheet
+          days={previousDays}
+          onCopy={(source) => void copyDay(source)}
+          onClose={() => setCopyOpen(false)}
+        />
+      )}
+
+      {routineOpen && (
+        <RoutineSheet
+          routines={routines}
+          canSave={hasEntries}
+          onSave={(name) => void saveCurrentAsRoutine(name)}
+          onApply={(routine) => void applyRoutine(routine)}
+          onRename={(id, name) => void renameRoutine(id, name)}
+          onDelete={(id) => void deleteRoutine(id)}
+          onClose={() => setRoutineOpen(false)}
+        />
+      )}
+
+      {weekPlanOpen && (
+        <WeeklyPlanSheet
+          routines={routines}
+          weeklyPlan={weeklyPlan}
+          onSave={(plan) => {
+            void saveWeeklyPlan(plan).then(() => setWeekPlanOpen(false));
+          }}
+          onClose={() => setWeekPlanOpen(false)}
         />
       )}
 

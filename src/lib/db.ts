@@ -168,6 +168,8 @@ export async function createProfile(
     goals: data.goals ?? {},
     recentExerciseIds: data.recentExerciseIds,
     favouriteExerciseIds: data.favouriteExerciseIds,
+    routines: data.routines,
+    weeklyPlan: data.weeklyPlan,
   });
 
   await withTimeout(setDoc(ref, profile), 15000, 'Failed to save profile');
@@ -365,6 +367,8 @@ export async function upsertWorkoutDay(
   const payload: Record<string, unknown> = { ...cleaned };
   if (cleaned.completedAt === null) payload.completedAt = null;
   if (cleaned.note === null) payload.note = null;
+  if (cleaned.routineId === null) payload.routineId = null;
+  if (cleaned.routineName === null) payload.routineName = null;
   await setDoc(ref, stripUndefinedDeep(payload), { merge: true });
 }
 
