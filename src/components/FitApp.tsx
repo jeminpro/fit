@@ -13,11 +13,6 @@ const routePaths: Record<AppRoute, string> = {
   you: `${base}you`,
 };
 
-const titles: Record<AppRoute, string> = {
-  home: 'Home',
-  you: 'You',
-};
-
 export function routeFromPath(path: string): AppRoute {
   if (path.includes('/you')) return 'you';
   return 'home';
@@ -44,7 +39,7 @@ export default function FitApp() {
 
   return (
     <AppProvider>
-      <AppShell title={titles[route]} route={route} onNavigate={navigate}>
+      <AppShell route={route} onNavigate={navigate}>
         {route === 'home' && <HomeDashboard />}
         {route === 'you' && <YouPage />}
       </AppShell>

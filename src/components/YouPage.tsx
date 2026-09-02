@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { exportProfileCsv, exportAllProfilesJson } from '../lib/export';
+import { exportAllProfilesJson } from '../lib/export';
 import { HabitHeatmap } from './HabitHeatmap';
 import type {
   Sex,
   MeasurementType,
-  UnitSystem,
   Measurement,
   HabitDay,
 } from '../lib/types';
@@ -24,7 +23,6 @@ export function YouPage() {
     profiles,
     activeProfile,
     setActiveProfile,
-    setUnits,
     signIn,
     signOut,
     createProfile,
@@ -37,7 +35,7 @@ export function YouPage() {
   const [showAddProfile, setShowAddProfile] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [sex, setSex] = useState<Sex>('other');
+  const [sex, setSex] = useState<Sex>('male');
   const [birthDate, setBirthDate] = useState('');
   const [enabled, setEnabled] = useState<MeasurementType[]>([
     ...DEFAULT_ENABLED_MEASUREMENTS,
@@ -51,7 +49,7 @@ export function YouPage() {
 
   function resetForm() {
     setName('');
-    setSex('other');
+    setSex('male');
     setBirthDate('');
     setEnabled([...DEFAULT_ENABLED_MEASUREMENTS]);
     setTargetWeight('');
@@ -131,17 +129,6 @@ export function YouPage() {
     await deleteProfile(profileId);
   }
 
-  async function exportActiveProfile() {
-    if (!activeProfile) return;
-    setExporting(true);
-    try {
-      const data = await getProfileExportData(activeProfile);
-      exportProfileCsv(activeProfile, data.measurements, data.habitDays, units);
-    } finally {
-      setExporting(false);
-    }
-  }
-
   async function exportAll() {
     setExporting(true);
     try {
@@ -184,17 +171,6 @@ export function YouPage() {
         ) : (
           <p className="mt-1 text-sm text-slate-400">{user?.email}</p>
         )}
-        <label className="mt-4 block">
-          <span className="text-sm font-medium text-slate-300">Units</span>
-          <select
-            value={units}
-            onChange={(e) => setUnits(e.target.value as UnitSystem)}
-            className="input mt-1"
-          >
-            <option value="metric">Metric (kg, cm)</option>
-            <option value="imperial">Imperial (lb, in)</option>
-          </select>
-        </label>
       </section>
 
       <section>
@@ -317,15 +293,23 @@ export function YouPage() {
                 placeholder="Name"
                 className="input rounded-lg px-3 py-2"
               />
-              <select
-                value={sex}
-                onChange={(e) => setSex(e.target.value as Sex)}
-                className="input rounded-lg px-3 py-2"
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              <div className="grid grid-cols-2 gap-2">
+                {(['male', 'female'] as Sex[]).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setSex(option)}
+                    aria-pressed={sex === option}
+                    className={`cursor-pointer rounded-lg border py-2 text-sm font-medium transition ${
+                      sex === option
+                        ? 'border-brand-500/60 bg-brand-500/15 text-brand-300'
+                        : 'border-surface-700 bg-surface-900/60 text-slate-300 hover:border-slate-500'
+                    }`}
+                  >
+                    {option === 'male' ? 'Male' : 'Female'}
+                  </button>
+                ))}
+              </div>
               <input
                 type="date"
                 value={birthDate}
@@ -394,29 +378,16 @@ export function YouPage() {
         <HabitHeatmap />
       </section>
 
-      <section className="card p-4">
+      <section className="card flex items-center justify-between p-4">
         <h3 className="text-sm font-semibold text-slate-300">Export data</h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Download CSV for the active profile or JSON for all profiles.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={exportActiveProfile}
-            disabled={exporting || !activeProfile}
-            className="btn-primary rounded-lg px-4 py-2 text-sm"
-          >
-            Export active (CSV)
-          </button>
-          <button
-            type="button"
-            onClick={exportAll}
-            disabled={exporting}
-            className="btn-secondary rounded-lg px-4 py-2 text-sm"
-          >
-            Export all (JSON)
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={exportAll}
+          disabled={exporting}
+          className="btn-secondary rounded-lg px-4 py-2 text-sm"
+        >
+          {exporting ? 'Exporting…' : 'Export all (JSON)'}
+        </button>
       </section>
 
       {!isGuest && (

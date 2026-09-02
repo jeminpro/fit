@@ -6,14 +6,15 @@ import { ProfileSwitcher } from './ProfileSwitcher';
 import { BottomNav } from './BottomNav';
 import type { AppRoute } from './FitApp';
 
+const base = import.meta.env.BASE_URL;
+
 interface AppShellProps {
-  title: string;
   route: AppRoute;
   onNavigate: (route: AppRoute) => void;
   children: React.ReactNode;
 }
 
-export function AppShell({ title, route, onNavigate, children }: AppShellProps) {
+export function AppShell({ route, onNavigate, children }: AppShellProps) {
   const { profiles, loading } = useApp();
   const [onboarded, setOnboarded] = useState(false);
   const hasProfiles = profiles.length > 0;
@@ -25,13 +26,19 @@ export function AppShell({ title, route, onNavigate, children }: AppShellProps) 
         <Onboarding onComplete={() => setOnboarded(true)} />
       ) : (
         <div className="mx-auto min-h-screen max-w-lg pb-24">
-          <header className="sticky top-0 z-40 border-b border-surface-800 bg-surface-950/90 px-4 py-4 backdrop-blur-md">
+          <header className="sticky top-0 z-40 border-b border-surface-800 bg-surface-950/90 px-4 py-3 backdrop-blur-md">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-brand-400">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={`${base}favicon.svg`}
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="h-7 w-7"
+                />
+                <p className="text-lg font-bold uppercase tracking-widest text-brand-400">
                   Fit
                 </p>
-                <h1 className="text-xl font-bold text-slate-100">{title}</h1>
               </div>
               <ProfileSwitcher />
             </div>

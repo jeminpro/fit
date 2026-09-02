@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import type { Sex, MeasurementType, UnitSystem } from '../lib/types';
+import type { Sex, MeasurementType } from '../lib/types';
 import {
   DEFAULT_ENABLED_MEASUREMENTS,
   OPTIONAL_MEASUREMENTS,
   MEASUREMENT_LABELS,
 } from '../lib/constants';
-import { toCanonical } from '../lib/units';
 import { stripUndefinedDeep } from '../lib/async';
 
 interface OnboardingProps {
@@ -17,9 +16,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   const { user, isGuest, signIn, setupInitialProfile, authError, clearAuthError } = useApp();
   const [step, setStep] = useState(0);
   const [signingIn, setSigningIn] = useState(false);
-  const [units, setUnitChoice] = useState<UnitSystem>('metric');
   const [name, setName] = useState('');
-  const [sex, setSex] = useState<Sex>('other');
+  const [sex, setSex] = useState<Sex>('male');
   const [birthDate, setBirthDate] = useState('');
   const [enabled, setEnabled] = useState<MeasurementType[]>([
     ...DEFAULT_ENABLED_MEASUREMENTS,
@@ -59,12 +57,8 @@ export function Onboarding({ onComplete }: OnboardingProps) {
 
     try {
       const goals = stripUndefinedDeep({
-        weight: targetWeight
-          ? toCanonical('weight', Number(targetWeight), units)
-          : undefined,
-        waist: targetWaist
-          ? toCanonical('waist', Number(targetWaist), units)
-          : undefined,
+        weight: targetWeight ? Number(targetWeight) : undefined,
+        waist: targetWaist ? Number(targetWaist) : undefined,
       }) as { weight?: number; waist?: number };
 
       await setupInitialProfile(
@@ -75,7 +69,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           enabledMeasurements: enabled,
           goals,
         },
-        units,
+        'metric',
       );
       onComplete();
     } catch (err) {
@@ -138,17 +132,6 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       {step === 0 && (
         <div className="space-y-4">
           <label className="block">
-            <span className="text-sm font-medium text-slate-300">Units</span>
-            <select
-              value={units}
-              onChange={(e) => setUnitChoice(e.target.value as UnitSystem)}
-              className="input mt-1"
-            >
-              <option value="metric">Metric (kg, cm)</option>
-              <option value="imperial">Imperial (lb, in)</option>
-            </select>
-          </label>
-          <label className="block">
             <span className="text-sm font-medium text-slate-300">Name</span>
             <input
               value={name}
@@ -157,18 +140,26 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               className="input mt-1"
             />
           </label>
-          <label className="block">
+          <div>
             <span className="text-sm font-medium text-slate-300">Sex</span>
-            <select
-              value={sex}
-              onChange={(e) => setSex(e.target.value as Sex)}
-              className="input mt-1"
-            >
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="other">Other / prefer not to say</option>
-            </select>
-          </label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              {(['male', 'female'] as Sex[]).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setSex(option)}
+                  aria-pressed={sex === option}
+                  className={`cursor-pointer rounded-xl border py-2.5 text-sm font-medium transition ${
+                    sex === option
+                      ? 'border-brand-500/60 bg-brand-500/15 text-brand-300'
+                      : 'border-surface-700 bg-surface-900/60 text-slate-300 hover:border-slate-500'
+                  }`}
+                >
+                  {option === 'male' ? 'Male' : 'Female'}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="block">
             <span className="text-sm font-medium text-slate-300">Birth date</span>
             <input
@@ -256,7 +247,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           <p className="text-sm text-slate-400">Optional goals to track progress.</p>
           <label className="block">
             <span className="text-sm font-medium text-slate-300">
-              Target weight ({units === 'metric' ? 'kg' : 'lb'})
+              Target weight (kg)
             </span>
             <input
               type="number"
@@ -268,7 +259,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
           </label>
           <label className="block">
             <span className="text-sm font-medium text-slate-300">
-              Target waist ({units === 'metric' ? 'cm' : 'in'})
+              Target waist (cm)
             </span>
             <input
               type="number"
