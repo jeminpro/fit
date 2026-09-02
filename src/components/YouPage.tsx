@@ -8,6 +8,7 @@ import type {
   Measurement,
   HabitDay,
 } from '../lib/types';
+import type { WorkoutDay } from '../lib/workoutTypes';
 import {
   MEASUREMENT_LABELS,
   OPTIONAL_MEASUREMENTS,
@@ -134,7 +135,11 @@ export function YouPage() {
     try {
       const data: Record<
         string,
-        { measurements: Measurement[]; habitDays: HabitDay[] }
+        {
+          measurements: Measurement[];
+          habitDays: HabitDay[];
+          workoutDays: WorkoutDay[];
+        }
       > = {};
       for (const profile of profiles) {
         data[profile.id] = await getProfileExportData(profile);

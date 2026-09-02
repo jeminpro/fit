@@ -2,18 +2,21 @@ import { useEffect, useState } from 'react';
 import { AppProvider } from '../context/AppContext';
 import { AppShell } from './AppShell';
 import { HomeDashboard } from './HomeDashboard';
+import { WorkoutPage } from './WorkoutPage';
 import { YouPage } from './YouPage';
 
-export type AppRoute = 'home' | 'you';
+export type AppRoute = 'home' | 'workout' | 'you';
 
 const base = import.meta.env.BASE_URL;
 
 const routePaths: Record<AppRoute, string> = {
   home: base.endsWith('/') ? base : `${base}/`,
+  workout: `${base}workout`,
   you: `${base}you`,
 };
 
 export function routeFromPath(path: string): AppRoute {
+  if (path.includes('/workout')) return 'workout';
   if (path.includes('/you')) return 'you';
   return 'home';
 }
@@ -41,6 +44,7 @@ export default function FitApp() {
     <AppProvider>
       <AppShell route={route} onNavigate={navigate}>
         {route === 'home' && <HomeDashboard />}
+        {route === 'workout' && <WorkoutPage />}
         {route === 'you' && <YouPage />}
       </AppShell>
     </AppProvider>

@@ -44,7 +44,7 @@ If sign-in still fails, check GitHub Actions secrets — without them the produc
 
 ## Firestore rules
 
-The app stores data under **nested subcollections** (`profiles`, `measurements`, `habitDays`). A rule on `users/{userId}` alone does **not** cover those paths — each level needs its own `match` block.
+The app stores data under **nested subcollections** (`profiles`, `measurements`, `habitDays`, `workoutDays`). A rule on `users/{userId}` alone does **not** cover those paths — use a recursive `/{document=**}` match.
 
 Copy this into Firebase Console → Firestore → Rules:
 
@@ -55,16 +55,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      match /profiles/{profileId} {
+      match /{document=**} {
         allow read, write: if request.auth != null && request.auth.uid == userId;
-
-        match /measurements/{measurementId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
-        }
-
-        match /habitDays/{dayId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId;
-        }
       }
     }
   }
@@ -76,9 +68,10 @@ Or deploy from this repo: `firebase deploy --only firestore:rules`
 ## Firestore structure
 
 - `users/{uid}` — units, activeProfileId
-- `users/{uid}/profiles/{profileId}` — name, sex, birthDate, enabledMeasurements, goals
+- `users/{uid}/profiles/{profileId}` — name, sex, birthDate, enabledMeasurements, goals, recentExerciseIds, favouriteExerciseIds
 - `users/{uid}/profiles/{profileId}/measurements/{id}` — type, value (metric), recordedAt, note
 - `users/{uid}/profiles/{profileId}/habitDays/{YYYY-MM-DD}` — exercise, water, sleep, meditation, snacks
+- `users/{uid}/profiles/{profileId}/workoutDays/{YYYY-MM-DD}` — planned exercises and set logs
 
 ## Deploy
 

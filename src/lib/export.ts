@@ -1,4 +1,5 @@
 import type { Measurement, HabitDay, Profile } from './types';
+import type { WorkoutDay } from './workoutTypes';
 import { MEASUREMENT_LABELS, HABIT_LABELS, HABIT_KEYS } from './constants';
 import { formatDisplayDate } from './dates';
 import { formatMeasurementValue } from './units';
@@ -54,12 +55,20 @@ export function exportProfileCsv(
 
 export function exportAllProfilesJson(
   profiles: Profile[],
-  data: Record<string, { measurements: Measurement[]; habitDays: HabitDay[] }>,
+  data: Record<
+    string,
+    {
+      measurements: Measurement[];
+      habitDays: HabitDay[];
+      workoutDays?: WorkoutDay[];
+    }
+  >,
 ): void {
   const payload = profiles.map((p) => ({
     profile: p,
     measurements: data[p.id]?.measurements ?? [],
     habitDays: data[p.id]?.habitDays ?? [],
+    workoutDays: data[p.id]?.workoutDays ?? [],
   }));
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: 'application/json',

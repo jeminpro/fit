@@ -6,6 +6,8 @@ import type {
   HabitDayInput,
   MeasurementInput,
 } from './types';
+import type { WorkoutDay, WorkoutDayInput } from './workoutTypes';
+import { sanitizeWorkoutDayInput } from './workoutTypes';
 import { DEFAULT_ENABLED_MEASUREMENTS } from './constants';
 
 const STORAGE_KEY = 'fit-local-data';
@@ -15,6 +17,7 @@ export interface LocalStore {
   profiles: Profile[];
   measurements: Record<string, Measurement[]>;
   habitDays: Record<string, HabitDay[]>;
+  workoutDays: Record<string, WorkoutDay[]>;
 }
 
 function emptyStore(): LocalStore {
@@ -23,6 +26,7 @@ function emptyStore(): LocalStore {
     profiles: [],
     measurements: {},
     habitDays: {},
+    workoutDays: {},
   };
 }
 
@@ -41,6 +45,7 @@ export function loadLocalStore(): LocalStore {
       profiles: parsed.profiles ?? [],
       measurements: parsed.measurements ?? {},
       habitDays: parsed.habitDays ?? {},
+      workoutDays: parsed.workoutDays ?? {},
     };
   } catch {
     return emptyStore();
@@ -98,6 +103,7 @@ export function createLocalProfile(data: Omit<Profile, 'id'>): string {
   store.profiles.push(profile);
   store.measurements[id] = [];
   store.habitDays[id] = [];
+  store.workoutDays[id] = [];
   if (!store.prefs.profileOrder) store.prefs.profileOrder = [];
   if (!store.prefs.profileOrder.includes(id)) {
     store.prefs.profileOrder.push(id);
@@ -125,6 +131,7 @@ export function deleteLocalProfile(profileId: string): void {
   store.profiles = store.profiles.filter((p) => p.id !== profileId);
   delete store.measurements[profileId];
   delete store.habitDays[profileId];
+  delete store.workoutDays[profileId];
   if (store.prefs.profileOrder) {
     store.prefs.profileOrder = store.prefs.profileOrder.filter(
       (id) => id !== profileId,
@@ -211,13 +218,54 @@ export function upsertLocalHabitDay(
   saveLocalStore(store);
 }
 
+export function getLocalWorkoutDays(profileId: string): WorkoutDay[] {
+  return loadLocalStore().workoutDays[profileId] ?? [];
+}
+
+export function upsertLocalWorkoutDay(
+  profileId: string,
+  dayId: string,
+  input: WorkoutDayInput,
+): void {
+  const store = loadLocalStore();
+  if (!store.workoutDays[profileId]) store.workoutDays[profileId] = [];
+  const cleaned = sanitizeWorkoutDayInput(input);
+  const existing = store.workoutDays[profileId].find((d) => d.id === dayId);
+  if (existing) {
+    if (cleaned.entries !== undefined) existing.entries = cleaned.entries;
+    if (cleaned.completedAt === null) delete existing.completedAt;
+    else if (cleaned.completedAt !== undefined) existing.completedAt = cleaned.completedAt;
+    if (cleaned.note === null) delete existing.note;
+    else if (cleaned.note !== undefined) existing.note = cleaned.note;
+  } else {
+    const day: WorkoutDay = {
+      id: dayId,
+      entries: cleaned.entries ?? [],
+    };
+    if (cleaned.completedAt) day.completedAt = cleaned.completedAt;
+    if (cleaned.note) day.note = cleaned.note;
+    store.workoutDays[profileId].push(day);
+  }
+  saveLocalStore(store);
+}
+
+export function deleteLocalWorkoutDay(profileId: string, dayId: string): void {
+  const store = loadLocalStore();
+  store.workoutDays[profileId] = (store.workoutDays[profileId] ?? []).filter(
+    (d) => d.id !== dayId,
+  );
+  saveLocalStore(store);
+}
+
 export function getLocalProfileData(profileId: string): {
   measurements: Measurement[];
   habitDays: HabitDay[];
+  workoutDays: WorkoutDay[];
 } {
   return {
     measurements: getLocalMeasurements(profileId),
     habitDays: getLocalHabitDays(profileId),
+    workoutDays: getLocalWorkoutDays(profileId),
   };
 }
 
@@ -226,6 +274,7 @@ export function reloadGuestState(): {
   profiles: Profile[];
   measurements: Measurement[];
   habitDays: HabitDay[];
+  workoutDays: WorkoutDay[];
 } {
   const store = loadLocalStore();
   const activeId =
@@ -235,5 +284,6 @@ export function reloadGuestState(): {
     profiles: store.profiles,
     measurements: activeId ? getLocalMeasurements(activeId) : [],
     habitDays: activeId ? getLocalHabitDays(activeId) : [],
+    workoutDays: activeId ? getLocalWorkoutDays(activeId) : [],
   };
 }

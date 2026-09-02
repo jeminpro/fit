@@ -15,6 +15,20 @@ function HomeIcon() {
   );
 }
 
+function WorkoutIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6.5 6.5v11" />
+      <path d="M17.5 6.5v11" />
+      <path d="M3.5 9.5h3" />
+      <path d="M3.5 14.5h3" />
+      <path d="M17.5 9.5h3" />
+      <path d="M17.5 14.5h3" />
+      <path d="M6.5 12h11" />
+    </svg>
+  );
+}
+
 function YouIcon() {
   return (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -26,6 +40,7 @@ function YouIcon() {
 
 const navItems: { route: AppRoute; label: string; icon: () => ReactNode }[] = [
   { route: 'home', label: 'Home', icon: HomeIcon },
+  { route: 'workout', label: 'Workout', icon: WorkoutIcon },
   { route: 'you', label: 'You', icon: YouIcon },
 ];
 

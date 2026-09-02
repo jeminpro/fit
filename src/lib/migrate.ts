@@ -4,6 +4,7 @@ import {
   createProfile,
   addMeasurementsBatch,
   upsertHabitDay,
+  upsertWorkoutDay,
 } from './db';
 import type { LocalStore } from './localDb';
 import { clearLocalStore } from './localDb';
@@ -24,6 +25,8 @@ export async function migrateLocalToFirebase(
       birthDate: profile.birthDate,
       enabledMeasurements: profile.enabledMeasurements,
       goals: profile.goals,
+      recentExerciseIds: profile.recentExerciseIds,
+      favouriteExerciseIds: profile.favouriteExerciseIds,
     });
     profileIdMap.set(profile.id, newId);
 
@@ -49,6 +52,20 @@ export async function migrateLocalToFirebase(
         note: day.note,
       });
       await upsertHabitDay(uid, newId, day.id, habitInput);
+    }
+
+    const workoutDays = store.workoutDays[profile.id] ?? [];
+    for (const day of workoutDays) {
+      await upsertWorkoutDay(
+        uid,
+        newId,
+        day.id,
+        stripUndefined({
+          entries: day.entries,
+          completedAt: day.completedAt,
+          note: day.note,
+        }),
+      );
     }
   }
 

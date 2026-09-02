@@ -25,6 +25,8 @@ import type {
   UnitSystem,
   Sex,
 } from './types';
+import type { WorkoutDay, WorkoutDayInput } from './workoutTypes';
+import { sanitizeWorkoutDayInput } from './workoutTypes';
 import { DEFAULT_ENABLED_MEASUREMENTS } from './constants';
 import { stripUndefined, stripUndefinedDeep, withTimeout } from './async';
 import { auth } from './firebase';
@@ -47,6 +49,10 @@ function measurementsRef(uid: string, profileId: string) {
 
 function habitDaysRef(uid: string, profileId: string) {
   return collection(getDb(), 'users', uid, 'profiles', profileId, 'habitDays');
+}
+
+function workoutDaysRef(uid: string, profileId: string) {
+  return collection(getDb(), 'users', uid, 'profiles', profileId, 'workoutDays');
 }
 
 function parseUserPrefs(data: Record<string, unknown>): UserPrefs {
@@ -160,6 +166,8 @@ export async function createProfile(
         ? data.enabledMeasurements
         : DEFAULT_ENABLED_MEASUREMENTS,
     goals: data.goals ?? {},
+    recentExerciseIds: data.recentExerciseIds,
+    favouriteExerciseIds: data.favouriteExerciseIds,
   });
 
   await withTimeout(setDoc(ref, profile), 15000, 'Failed to save profile');
@@ -184,10 +192,12 @@ export async function deleteProfile(
 ): Promise<void> {
   const measurements = await getDocs(measurementsRef(uid, profileId));
   const habits = await getDocs(habitDaysRef(uid, profileId));
+  const workouts = await getDocs(workoutDaysRef(uid, profileId));
   const batch = writeBatch(getDb());
 
   measurements.docs.forEach((d) => batch.delete(d.ref));
   habits.docs.forEach((d) => batch.delete(d.ref));
+  workouts.docs.forEach((d) => batch.delete(d.ref));
   batch.delete(profileRef(uid, profileId));
   await batch.commit();
 }
@@ -318,6 +328,54 @@ export async function deleteHabitDay(
   await deleteDoc(doc(habitDaysRef(uid, profileId), dayId));
 }
 
+export async function getWorkoutDays(
+  uid: string,
+  profileId: string,
+): Promise<WorkoutDay[]> {
+  const snap = await getDocs(workoutDaysRef(uid, profileId));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorkoutDay));
+}
+
+export function subscribeWorkoutDays(
+  uid: string,
+  profileId: string,
+  callback: (days: WorkoutDay[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe {
+  return onSnapshot(
+    workoutDaysRef(uid, profileId),
+    (snap) => {
+      callback(snap.docs.map((d) => ({ id: d.id, ...d.data() } as WorkoutDay)));
+    },
+    (error) => {
+      console.error('Workout days subscription failed:', error);
+      onError?.(error);
+    },
+  );
+}
+
+export async function upsertWorkoutDay(
+  uid: string,
+  profileId: string,
+  dayId: string,
+  input: WorkoutDayInput,
+): Promise<void> {
+  const ref = doc(workoutDaysRef(uid, profileId), dayId);
+  const cleaned = sanitizeWorkoutDayInput(input);
+  const payload: Record<string, unknown> = { ...cleaned };
+  if (cleaned.completedAt === null) payload.completedAt = null;
+  if (cleaned.note === null) payload.note = null;
+  await setDoc(ref, stripUndefinedDeep(payload), { merge: true });
+}
+
+export async function deleteWorkoutDay(
+  uid: string,
+  profileId: string,
+  dayId: string,
+): Promise<void> {
+  await deleteDoc(doc(workoutDaysRef(uid, profileId), dayId));
+}
+
 export function buildProfileInput(
   name: string,
   sex: Sex,
@@ -337,10 +395,15 @@ export function buildProfileInput(
 export async function exportProfileData(
   uid: string,
   profile: Profile,
-): Promise<{ measurements: Measurement[]; habitDays: HabitDay[] }> {
-  const [measurements, habitDays] = await Promise.all([
+): Promise<{
+  measurements: Measurement[];
+  habitDays: HabitDay[];
+  workoutDays: WorkoutDay[];
+}> {
+  const [measurements, habitDays, workoutDays] = await Promise.all([
     getMeasurements(uid, profile.id),
     getHabitDays(uid, profile.id),
+    getWorkoutDays(uid, profile.id),
   ]);
-  return { measurements, habitDays };
+  return { measurements, habitDays, workoutDays };
 }

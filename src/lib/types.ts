@@ -32,6 +32,8 @@ export interface Profile {
   birthDate: string;
   enabledMeasurements: MeasurementType[];
   goals: ProfileGoals;
+  recentExerciseIds?: string[];
+  favouriteExerciseIds?: string[];
 }
 
 export interface Measurement {

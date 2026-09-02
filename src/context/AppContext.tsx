@@ -22,6 +22,7 @@ import {
   subscribeProfiles,
   subscribeMeasurements,
   subscribeHabitDays,
+  subscribeWorkoutDays,
   updateUserPrefs,
   createProfile as createRemoteProfile,
   updateProfile as updateRemoteProfile,
@@ -31,6 +32,7 @@ import {
   updateMeasurement as updateRemoteMeasurement,
   deleteMeasurement as deleteRemoteMeasurement,
   upsertHabitDay as upsertRemoteHabitDay,
+  upsertWorkoutDay as upsertRemoteWorkoutDay,
   exportProfileData,
 } from '../lib/db';
 import {
@@ -44,6 +46,7 @@ import {
   updateLocalMeasurement,
   deleteLocalMeasurement,
   upsertLocalHabitDay,
+  upsertLocalWorkoutDay,
   getLocalProfileData,
   loadLocalStore,
   clearLocalStore,
@@ -66,6 +69,9 @@ import type {
   HabitDayInput,
   MeasurementInput,
 } from '../lib/types';
+import type { WorkoutDay, WorkoutDayInput } from '../lib/workoutTypes';
+
+const MAX_RECENT_EXERCISES = 20;
 
 interface AppContextValue {
   user: User | null;
@@ -79,6 +85,8 @@ interface AppContextValue {
   measurements: Measurement[];
   habitDays: HabitDay[];
   habitDaysMap: Map<string, HabitDay>;
+  workoutDays: WorkoutDay[];
+  workoutDaysMap: Map<string, WorkoutDay>;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   authError: string | null;
@@ -106,9 +114,16 @@ interface AppContextValue {
   ) => Promise<void>;
   deleteMeasurement: (measurementId: string) => Promise<void>;
   upsertHabitDay: (dayId: string, input: HabitDayInput) => Promise<void>;
+  upsertWorkoutDay: (dayId: string, input: WorkoutDayInput) => Promise<void>;
+  pushRecentExercises: (exerciseIds: string[]) => Promise<void>;
+  toggleFavouriteExercise: (exerciseId: string) => Promise<void>;
   getProfileExportData: (
     profile: Profile,
-  ) => Promise<{ measurements: Measurement[]; habitDays: HabitDay[] }>;
+  ) => Promise<{
+    measurements: Measurement[];
+    habitDays: HabitDay[];
+    workoutDays: WorkoutDay[];
+  }>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -134,6 +149,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [habitDays, setHabitDays] = useState<HabitDay[]>([]);
+  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([]);
   const [authError, setAuthError] = useState<string | null>(null);
 
   const migrationChecked = useRef(false);
@@ -150,6 +166,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setProfiles(sanitizeProfiles(state.profiles));
     setMeasurements(state.measurements);
     setHabitDays(state.habitDays);
+    setWorkoutDays(state.workoutDays);
     setPrefsLoaded(true);
     setProfilesLoaded(true);
   }, []);
@@ -280,9 +297,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         activeProfile.id,
         setHabitDays,
       );
+      const unsubWorkouts = subscribeWorkoutDays(
+        user.uid,
+        activeProfile.id,
+        setWorkoutDays,
+        (error) => {
+          console.error('Workout days could not be loaded:', error.message);
+        },
+      );
       return () => {
         unsubMeasurements();
         unsubHabits();
+        unsubWorkouts();
       };
     }
 
@@ -291,6 +317,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } else if (isGuest && !activeProfile) {
       setMeasurements([]);
       setHabitDays([]);
+      setWorkoutDays([]);
     }
   }, [user, isGuest, activeProfile?.id, refreshGuestData]);
 
@@ -309,6 +336,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const habitDaysMap = useMemo(
     () => new Map(habitDays.map((d) => [d.id, d])),
     [habitDays],
+  );
+
+  const workoutDaysMap = useMemo(
+    () => new Map(workoutDays.map((d) => [d.id, d])),
+    [workoutDays],
   );
 
   async function signIn() {
@@ -496,6 +528,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function upsertWorkoutDay(dayId: string, input: WorkoutDayInput) {
+    if (!activeProfile) throw new Error('No active profile');
+    if (user) {
+      await upsertRemoteWorkoutDay(user.uid, activeProfile.id, dayId, input);
+    } else {
+      upsertLocalWorkoutDay(activeProfile.id, dayId, input);
+      refreshGuestData();
+    }
+  }
+
+  async function pushRecentExercises(exerciseIds: string[]) {
+    if (!activeProfile || exerciseIds.length === 0) return;
+    const existing = activeProfile.recentExerciseIds ?? [];
+    const next = [
+      ...exerciseIds,
+      ...existing.filter((id) => !exerciseIds.includes(id)),
+    ].slice(0, MAX_RECENT_EXERCISES);
+    await updateProfile(activeProfile.id, { recentExerciseIds: next });
+  }
+
+  async function toggleFavouriteExercise(exerciseId: string) {
+    if (!activeProfile) return;
+    const existing = activeProfile.favouriteExerciseIds ?? [];
+    const next = existing.includes(exerciseId)
+      ? existing.filter((id) => id !== exerciseId)
+      : [exerciseId, ...existing];
+    await updateProfile(activeProfile.id, { favouriteExerciseIds: next });
+  }
+
   async function getProfileExportData(profile: Profile) {
     if (user) {
       return exportProfileData(user.uid, profile);
@@ -515,6 +576,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     measurements,
     habitDays,
     habitDaysMap,
+    workoutDays,
+    workoutDaysMap,
     signIn,
     signOut,
     authError,
@@ -533,6 +596,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateMeasurement,
     deleteMeasurement,
     upsertHabitDay,
+    upsertWorkoutDay,
+    pushRecentExercises,
+    toggleFavouriteExercise,
     getProfileExportData,
   };
 
