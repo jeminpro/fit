@@ -5,8 +5,6 @@ export type MeasurementType =
   | 'weight'
   | 'waist'
   | 'hips'
-  | 'chest'
-  | 'thigh'
   | 'arm';
 export type HabitKey =
   | 'exercise'

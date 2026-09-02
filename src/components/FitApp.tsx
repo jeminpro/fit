@@ -1,30 +1,26 @@
 import { useEffect, useState } from 'react';
 import { AppProvider } from '../context/AppContext';
 import { AppShell } from './AppShell';
-import { TodayDashboard } from './TodayDashboard';
-import { BodyDashboard } from './BodyDashboard';
+import { HomeDashboard } from './HomeDashboard';
 import { YouPage } from './YouPage';
 
-export type AppRoute = 'today' | 'body' | 'you';
+export type AppRoute = 'home' | 'you';
 
 const base = import.meta.env.BASE_URL;
 
 const routePaths: Record<AppRoute, string> = {
-  today: base.endsWith('/') ? base : `${base}/`,
-  body: `${base}body`,
+  home: base.endsWith('/') ? base : `${base}/`,
   you: `${base}you`,
 };
 
 const titles: Record<AppRoute, string> = {
-  today: 'Today',
-  body: 'Body',
+  home: 'Home',
   you: 'You',
 };
 
 export function routeFromPath(path: string): AppRoute {
-  if (path.includes('/body')) return 'body';
   if (path.includes('/you')) return 'you';
-  return 'today';
+  return 'home';
 }
 
 export default function FitApp() {
@@ -49,8 +45,7 @@ export default function FitApp() {
   return (
     <AppProvider>
       <AppShell title={titles[route]} route={route} onNavigate={navigate}>
-        {route === 'today' && <TodayDashboard />}
-        {route === 'body' && <BodyDashboard />}
+        {route === 'home' && <HomeDashboard />}
         {route === 'you' && <YouPage />}
       </AppShell>
     </AppProvider>

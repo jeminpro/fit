@@ -49,6 +49,7 @@ import {
   clearLocalStore,
 } from '../lib/localDb';
 import { migrateLocalToFirebase } from '../lib/migrate';
+import { MEASUREMENT_TYPES } from '../lib/constants';
 import {
   sortProfilesByOrder,
   normalizeProfileOrder,
@@ -112,6 +113,17 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+/** Drop measurement types that are no longer supported (e.g. chest, thigh)
+ * from profiles persisted before those types were removed. */
+function sanitizeProfiles(list: Profile[]): Profile[] {
+  return list.map((profile) => ({
+    ...profile,
+    enabledMeasurements: profile.enabledMeasurements.filter((t) =>
+      MEASUREMENT_TYPES.includes(t),
+    ),
+  }));
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -135,7 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshGuestData = useCallback(() => {
     const state = reloadGuestState();
     setPrefs(state.prefs);
-    setProfiles(state.profiles);
+    setProfiles(sanitizeProfiles(state.profiles));
     setMeasurements(state.measurements);
     setHabitDays(state.habitDays);
     setPrefsLoaded(true);
@@ -203,7 +215,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const unsubscribe = subscribeProfiles(
       user.uid,
       (nextProfiles) => {
-        setProfiles(nextProfiles);
+        setProfiles(sanitizeProfiles(nextProfiles));
         setProfilesLoaded(true);
         clearTimeout(fallback);
 

@@ -30,8 +30,6 @@ export function CheckinWizard({ onClose }: CheckinWizardProps) {
       'weight',
       'waist',
       'hips',
-      'chest',
-      'thigh',
       'arm',
       'height',
     ] as MeasurementType[];

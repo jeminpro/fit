@@ -209,16 +209,17 @@ export function computeDerivedMetrics(
     const years = profile ? yearsAt(profile.birthDate, recordedAt) : undefined;
     const isAdult = years !== undefined && years >= ADULT_YEARS;
 
-    derived.push({
-      key: 'whr',
-      label: 'Waist-to-hip',
-      value: ratio,
-      formatted: ratio.toFixed(2),
-      hint: isAdult
-        ? 'Ratio of latest waist and hip measurements. Lower is generally healthier.'
-        : 'Ratio of latest waist and hip measurements. Adult cutoffs do not apply before 18.',
-      status: isAdult && profile ? whrStatus(ratio, profile.sex) : undefined,
-    });
+    // WHR cutoffs are only validated for adults; hide the metric for under-18s.
+    if (isAdult) {
+      derived.push({
+        key: 'whr',
+        label: 'Waist-to-hip',
+        value: ratio,
+        formatted: ratio.toFixed(2),
+        hint: 'Ratio of latest waist and hip measurements. Lower is generally healthier.',
+        status: profile ? whrStatus(ratio, profile.sex) : undefined,
+      });
+    }
   }
 
   return derived;

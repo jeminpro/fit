@@ -6,19 +6,11 @@ interface BottomNavProps {
   onNavigate: (route: AppRoute) => void;
 }
 
-function TodayIcon() {
+function HomeIcon() {
   return (
     <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
-  );
-}
-
-function BodyIcon() {
-  return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 12h3l2-7 4 14 3-10 1.5 3H21" />
+      <path d="M3 10.5L12 3l9 7.5" />
+      <path d="M5 9.5V21h14V9.5" />
     </svg>
   );
 }
@@ -33,8 +25,7 @@ function YouIcon() {
 }
 
 const navItems: { route: AppRoute; label: string; icon: () => ReactNode }[] = [
-  { route: 'today', label: 'Today', icon: TodayIcon },
-  { route: 'body', label: 'Body', icon: BodyIcon },
+  { route: 'home', label: 'Home', icon: HomeIcon },
   { route: 'you', label: 'You', icon: YouIcon },
 ];
 

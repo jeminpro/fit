@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { HABIT_KEYS } from '../lib/constants';
+import { HABIT_KEYS, MEASUREMENT_TIPS } from '../lib/constants';
 import {
   todayKey,
   habitScore,
-  computeHabitStreak,
   formatDisplayDate,
   formatDayLabel,
   daysSince,
@@ -12,24 +11,41 @@ import {
 import { subDays, addDays, format, parseISO } from 'date-fns';
 import { HabitRow } from './HabitRow';
 import { DerivedMetricCard } from './DerivedMetricCard';
+import { MetricCard } from './MetricCard';
+import { MetricHistory } from './MetricHistory';
+import { CheckinWizard } from './CheckinWizard';
+import type { MeasurementType } from '../lib/types';
 import {
   getLatestByType,
   findMeasurementDaysAgo,
   computeDerivedMetrics,
 } from '../lib/derived';
-import { formatMeasurementValue, formatDelta } from '../lib/units';
+import {
+  formatMeasurementValue,
+  formatDelta,
+  toCanonical,
+  unitLabel,
+} from '../lib/units';
 
-const base = import.meta.env.BASE_URL;
-
-export function TodayDashboard() {
-  const { activeProfile, measurements, habitDaysMap, prefs } = useApp();
+export function HomeDashboard() {
+  const { activeProfile, measurements, habitDaysMap, prefs, addMeasurement } =
+    useApp();
   const units = prefs?.units ?? 'metric';
   const today = todayKey();
   const [selectedDay, setSelectedDay] = useState(today);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
+  const [showWizard, setShowWizard] = useState(false);
+  const [selectedType, setSelectedType] = useState<MeasurementType | null>(null);
+
+  const [weightInput, setWeightInput] = useState('');
+  const [weightSaving, setWeightSaving] = useState(false);
+  const [weightError, setWeightError] = useState('');
+
   useEffect(() => {
     setSelectedDay(todayKey());
+    setWeightInput('');
+    setWeightError('');
   }, [activeProfile?.id]);
 
   const todayHabits = habitDaysMap.get(today);
@@ -39,7 +55,6 @@ export function TodayDashboard() {
   const isToday = selectedDay === today;
 
   const score = habitScore(todayHabits);
-  const streak = computeHabitStreak(habitDaysMap);
   const completedToday = HABIT_KEYS.filter(
     (k) => todayHabits?.[k] !== undefined,
   ).length;
@@ -54,6 +69,8 @@ export function TodayDashboard() {
     latestWeight && weekAgoWeight
       ? latestWeight.value - weekAgoWeight.value
       : null;
+  const weightLoggedToday =
+    latestWeight !== null && latestWeight.recordedAt.startsWith(today);
 
   const nudges = useMemo(() => {
     const items: string[] = [];
@@ -78,6 +95,28 @@ export function TodayDashboard() {
     measurements,
     activeProfile ?? undefined,
   );
+
+  async function logWeight() {
+    const parsed = Number(weightInput);
+    if (weightInput.trim() === '' || Number.isNaN(parsed) || parsed <= 0) {
+      setWeightError('Enter a valid weight.');
+      return;
+    }
+    setWeightSaving(true);
+    setWeightError('');
+    try {
+      await addMeasurement({
+        type: 'weight',
+        value: toCanonical('weight', parsed, units),
+        recordedAt: new Date().toISOString(),
+      });
+      setWeightInput('');
+    } catch (err) {
+      setWeightError(err instanceof Error ? err.message : 'Failed to save.');
+    } finally {
+      setWeightSaving(false);
+    }
+  }
 
   function goPrevDay() {
     setSelectedDay(
@@ -105,6 +144,8 @@ export function TodayDashboard() {
 
   if (!activeProfile) return null;
 
+  const enabled = activeProfile.enabledMeasurements;
+
   return (
     <div className="space-y-6">
       <section className="grid grid-cols-2 gap-3">
@@ -119,78 +160,75 @@ export function TodayDashboard() {
             {completedToday}/{HABIT_KEYS.length} logged today
           </p>
         </div>
-        <div className="card p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-            Streak
-          </p>
-          <p className="mt-1 text-3xl font-bold text-brand-400">{streak}</p>
-          <p className="mt-1 text-xs text-slate-500">days in a row</p>
+        <div className="card bg-gradient-to-br from-surface-900 to-brand-900/30 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              Weight
+            </p>
+            {weightLoggedToday && (
+              <span
+                className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-brand-400"
+                title="Logged today"
+                aria-label="Logged today"
+              />
+            )}
+          </div>
+          {latestWeight ? (
+            <button
+              type="button"
+              onClick={() => setSelectedType('weight')}
+              className="mt-1 cursor-pointer text-left text-3xl font-bold text-slate-100 transition hover:text-brand-300"
+            >
+              {formatMeasurementValue('weight', latestWeight.value, units)}
+            </button>
+          ) : (
+            <p className="mt-1 text-sm text-slate-400">No weight yet.</p>
+          )}
+          {weightDelta !== null && (
+            <p className="mt-1 text-xs text-slate-500">
+              {formatDelta('weight', weightDelta, units)} vs 7 days ago
+            </p>
+          )}
+          <div className="mt-2 flex gap-1.5">
+            <div className="relative min-w-0 flex-1">
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                inputMode="decimal"
+                value={weightInput}
+                onChange={(e) => {
+                  setWeightInput(e.target.value);
+                  if (weightError) setWeightError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void logWeight();
+                }}
+                placeholder={
+                  latestWeight
+                    ? `${formatMeasurementValue('weight', latestWeight.value, units).split(' ')[0]}`
+                    : 'Log'
+                }
+                className="input py-2 pr-9 text-sm"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center text-xs text-slate-500">
+                {unitLabel('weight', units)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void logWeight()}
+              disabled={weightSaving}
+              className="btn-primary px-3 py-2 text-sm"
+            >
+              {weightSaving ? '…' : 'Log'}
+            </button>
+          </div>
+          {weightError && (
+            <p className="mt-2 text-xs text-rose-400">{weightError}</p>
+          )}
         </div>
       </section>
-
-      {latestWeight && (
-        <section className="card bg-gradient-to-br from-surface-900 to-brand-900/30 p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                Latest weight
-              </p>
-              <p className="mt-1 text-2xl font-bold text-slate-100">
-                {formatMeasurementValue('weight', latestWeight.value, units)}
-              </p>
-              {weightDelta !== null && (
-                <p className="mt-1 text-sm text-slate-400">
-                  {formatDelta('weight', weightDelta, units)} vs 7 days ago
-                </p>
-              )}
-            </div>
-            <a
-              href={`${base}body`}
-              className="btn-primary px-3 py-1.5 text-xs"
-            >
-              Log measure
-            </a>
-          </div>
-        </section>
-      )}
-
-      {!latestWeight && (
-        <section className="rounded-2xl border border-dashed border-surface-700 bg-surface-900/50 p-4 text-center">
-          <p className="text-sm text-slate-400">No weight logged yet.</p>
-          <a
-            href={`${base}body`}
-            className="mt-2 inline-block text-sm font-semibold text-brand-400 transition hover:text-brand-300"
-          >
-            Start a body check-in →
-          </a>
-        </section>
-      )}
-
-      {derived.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-sm font-semibold text-slate-300">
-            Derived metrics
-          </h3>
-          <div className="grid grid-cols-3 gap-2">
-            {derived.map((d) => (
-              <DerivedMetricCard key={d.key} metric={d} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {nudges.length > 0 && (
-        <section className="space-y-2">
-          {nudges.map((nudge) => (
-            <div
-              key={nudge}
-              className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
-            >
-              {nudge}
-            </div>
-          ))}
-        </section>
-      )}
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-2">
@@ -268,6 +306,67 @@ export function TodayDashboard() {
           ))}
         </div>
       </section>
+
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-slate-300">Body</h3>
+          <button
+            type="button"
+            onClick={() => setShowWizard(true)}
+            className="btn-primary px-3 py-1.5 text-xs"
+          >
+            Check-in
+          </button>
+        </div>
+
+        {nudges.length > 0 && (
+          <div className="mb-3 space-y-2">
+            {nudges.map((nudge) => (
+              <div
+                key={nudge}
+                className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200"
+              >
+                {nudge}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {derived.length > 0 && (
+          <div className="mb-3">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+              Derived metrics
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {derived.map((d) => (
+                <DerivedMetricCard key={d.key} metric={d} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {enabled.map((type) => (
+            <MetricCard
+              key={type}
+              type={type}
+              onClick={() => setSelectedType(type)}
+            />
+          ))}
+        </div>
+      </section>
+
+      {selectedType && (
+        <MetricHistory
+          type={selectedType}
+          tip={MEASUREMENT_TIPS[selectedType]}
+          onClose={() => setSelectedType(null)}
+        />
+      )}
+
+      {showWizard && (
+        <CheckinWizard onClose={() => setShowWizard(false)} />
+      )}
     </div>
   );
 }

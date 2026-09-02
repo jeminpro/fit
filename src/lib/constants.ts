@@ -23,8 +23,6 @@ export const MEASUREMENT_TYPES: MeasurementType[] = [
   'weight',
   'waist',
   'hips',
-  'chest',
-  'thigh',
   'arm',
 ];
 
@@ -33,8 +31,6 @@ export const MEASUREMENT_LABELS: Record<MeasurementType, string> = {
   weight: 'Weight',
   waist: 'Waist',
   hips: 'Hips / Glutes',
-  chest: 'Chest',
-  thigh: 'Thighs',
   arm: 'Arms',
 };
 
@@ -44,8 +40,6 @@ export const MEASUREMENT_TIPS: Record<MeasurementType, string> = {
   waist:
     'Measure at the navel or midway between your hip bone and ribs to track internal fat and health risks.',
   hips: 'Measure at the widest part of your buttocks.',
-  chest: 'Measure across the widest part around the nipple line.',
-  thigh: 'Measure at the widest part of each upper leg (same side each time).',
   arm: 'Measure the midpoint of your upper arm or flexed biceps.',
 };
 
@@ -57,8 +51,6 @@ export const DEFAULT_ENABLED_MEASUREMENTS: MeasurementType[] = [
 
 export const OPTIONAL_MEASUREMENTS: MeasurementType[] = [
   'hips',
-  'chest',
-  'thigh',
   'arm',
 ];
 
@@ -70,8 +62,6 @@ export const MEASUREMENT_UNITS: Record<
   weight: { metric: 'kg', imperial: 'lb' },
   waist: { metric: 'cm', imperial: 'in' },
   hips: { metric: 'cm', imperial: 'in' },
-  chest: { metric: 'cm', imperial: 'in' },
-  thigh: { metric: 'cm', imperial: 'in' },
   arm: { metric: 'cm', imperial: 'in' },
 };
 
