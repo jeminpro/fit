@@ -98,6 +98,7 @@ export function ExercisePicker({
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createdItems, setCreatedItems] = useState<ExerciseIndexItem[]>([]);
+  const [recentOpen, setRecentOpen] = useState(false);
   const addedSet = useMemo(() => new Set(addedIds), [addedIds]);
 
   const allExercises = useMemo(() => {
@@ -368,10 +369,35 @@ export function ExercisePicker({
           )}
           {showBrowseSections && recents.length > 0 && (
             <section>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Recent
-              </h3>
-              <div className="space-y-2">{recents.map(renderRow)}</div>
+              <button
+                type="button"
+                className="mb-2 flex w-full items-center justify-between gap-2 rounded-lg py-1 text-left hover:bg-surface-800/60"
+                onClick={() => setRecentOpen((open) => !open)}
+                aria-expanded={recentOpen}
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Recent
+                </h3>
+                <svg
+                  viewBox="0 0 20 20"
+                  className={`h-5 w-5 shrink-0 text-slate-300 transition-transform ${
+                    recentOpen ? 'rotate-180' : ''
+                  }`}
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5 10 12l4.5-4.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {recentOpen && (
+                <div className="space-y-2">{recents.map(renderRow)}</div>
+              )}
             </section>
           )}
           {showBrowseSections && customExercises.length > 0 && (

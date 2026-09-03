@@ -874,7 +874,7 @@ export function WorkoutPage() {
             className="btn-secondary flex-1 px-3 py-2 text-xs"
             onClick={() => setCopyOpen(true)}
           >
-            Copy
+            Copy previous
           </button>
           <button
             type="button"
