@@ -25,9 +25,9 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
       {needsOnboarding ? (
         <Onboarding onComplete={() => setOnboarded(true)} />
       ) : (
-        <div className="mx-auto min-h-screen max-w-lg pb-24">
-          <header className="sticky top-0 z-40 border-b border-surface-800 bg-surface-950/90 px-4 py-3 backdrop-blur-md">
-            <div className="flex items-center justify-between gap-3">
+        <div className="min-h-screen pb-24">
+          <header className="sticky top-0 z-40 border-b border-surface-800 bg-surface-950/90 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+            <div className="mx-auto flex h-14 max-w-lg items-center justify-between gap-3 px-4">
               <div className="flex items-center gap-2.5">
                 <img
                   src={`${base}favicon.svg`}
@@ -43,7 +43,7 @@ export function AppShell({ route, onNavigate, children }: AppShellProps) {
               <ProfileSwitcher />
             </div>
           </header>
-          <main className="px-4 py-6">
+          <main className="mx-auto max-w-lg px-4 py-6">
             <GuestBanner />
             {children}
           </main>
