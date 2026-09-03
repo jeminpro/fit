@@ -21,6 +21,7 @@ interface ExercisePickerProps {
   onClose: () => void;
   onOpenDetail: (exercise: ExerciseIndexItem) => void;
   title?: string;
+  overlayClassName?: string;
 }
 
 function FacetSelect({
@@ -84,6 +85,7 @@ export function ExercisePicker({
   onClose,
   onOpenDetail,
   title = 'Add exercises',
+  overlayClassName = 'z-50',
 }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
@@ -296,7 +298,7 @@ export function ExercisePicker({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+    <div className={`fixed inset-0 ${overlayClassName} flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4`}>
       <div className="flex h-[92vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:h-[85vh] sm:rounded-2xl">
         <div className="sticky top-0 z-10 border-b border-surface-800 bg-surface-900/95 px-4 pb-3 pt-4 backdrop-blur">
           <div className="mb-3 flex items-center justify-between">

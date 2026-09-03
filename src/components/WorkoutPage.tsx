@@ -46,6 +46,7 @@ import {
   type ExercisePlanDraft,
 } from './ExerciseDetailSheet';
 import { CopyWorkoutSheet } from './CopyWorkoutSheet';
+import { RoutineEditor } from './RoutineEditor';
 import { RoutineSheet, type RoutineLinks } from './RoutineSheet';
 import { WeeklyPlanSheet } from './WeeklyPlanSheet';
 import { TemplateSheet } from './TemplateSheet';
@@ -117,6 +118,7 @@ export function WorkoutPage() {
   const [pendingTemplateName, setPendingTemplateName] = useState('');
   const [copyOpen, setCopyOpen] = useState(false);
   const [routineOpen, setRoutineOpen] = useState(false);
+  const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [weekPlanOpen, setWeekPlanOpen] = useState(false);
   const [templateKind, setTemplateKind] = useState<TemplateKind | null>(null);
   const [detailExercise, setDetailExercise] = useState<ExerciseIndexItem | null>(null);
@@ -132,6 +134,8 @@ export function WorkoutPage() {
   } | null>(null);
   const optimisticRef = useRef(optimistic);
   const writeChainRef = useRef(Promise.resolve());
+  const routinesRef = useRef(routines);
+  routinesRef.current = routines;
   const templateStartedRef = useRef(false);
 
   useEffect(() => {
@@ -599,6 +603,22 @@ export function WorkoutPage() {
     );
   }
 
+  async function updateRoutine(next: Routine) {
+    const run = async () => {
+      await saveRoutines(
+        routinesRef.current.map((routine) =>
+          routine.id === next.id ? next : routine,
+        ),
+      );
+    };
+    const chained = writeChainRef.current.then(run, run);
+    writeChainRef.current = chained.then(
+      () => undefined,
+      () => undefined,
+    );
+    return chained;
+  }
+
   async function setRoutineLinks(routineId: string, links: RoutineLinks) {
     await saveRoutines(
       routines.map((routine) => {
@@ -743,6 +763,9 @@ export function WorkoutPage() {
   const recentIds = activeProfile.recentExerciseIds ?? [];
   const exerciseNotes = activeProfile.exerciseNotes ?? {};
   const routineName = day?.routineName;
+  const editingRoutine = editingRoutineId
+    ? (routines.find((routine) => routine.id === editingRoutineId) ?? null)
+    : null;
 
   let primaryActionLabel = 'Add exercises';
   if (hasMainEntries && progress === 'empty') primaryActionLabel = 'Add exercises';
@@ -960,7 +983,33 @@ export function WorkoutPage() {
           onRename={(id, name) => void renameRoutine(id, name)}
           onDelete={(id) => void deleteRoutine(id)}
           onSetLinks={(id, links) => void setRoutineLinks(id, links)}
+          onEdit={(routine) => {
+            setPickerOpen(false);
+            setRoutineOpen(false);
+            setEditingRoutineId(routine.id);
+          }}
           onClose={() => setRoutineOpen(false)}
+        />
+      )}
+
+      {editingRoutine && (
+        <RoutineEditor
+          routine={editingRoutine}
+          warmupTemplates={warmupTemplates}
+          cooldownTemplates={cooldownTemplates}
+          exercises={pickerExercises}
+          sha={catalog?.sha ?? ''}
+          units={units}
+          favouriteIds={favouriteIds}
+          recentIds={recentIds}
+          notes={exerciseNotes}
+          catalogLoading={catalogLoading}
+          onChange={(next) => void updateRoutine(next)}
+          onCreateCustom={ensureCustomExercise}
+          onClose={() => {
+            setEditingRoutineId(null);
+            setRoutineOpen(true);
+          }}
         />
       )}
 

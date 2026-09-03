@@ -19,10 +19,11 @@ interface RoutineSheetProps {
   onRename: (routineId: string, name: string) => void;
   onDelete: (routineId: string) => void;
   onSetLinks: (routineId: string, links: RoutineLinks) => void;
+  onEdit: (routine: Routine) => void;
   onClose: () => void;
 }
 
-function TemplateSelect({
+export function TemplateSelect({
   label,
   value,
   templates,
@@ -80,6 +81,7 @@ export function RoutineSheet({
   onRename,
   onDelete,
   onSetLinks,
+  onEdit,
   onClose,
 }: RoutineSheetProps) {
   const [name, setName] = useState('');
@@ -193,7 +195,7 @@ export function RoutineSheet({
                   <div className="flex items-center gap-2">
                     {renamingId === routine.id ? (
                       <input
-                        className="input flex-1 py-1.5 text-sm"
+                        className="input min-w-0 flex-1 py-1.5 text-sm"
                         value={renameValue}
                         autoFocus
                         onChange={(e) => setRenameValue(e.target.value)}
@@ -217,6 +219,13 @@ export function RoutineSheet({
                         </p>
                       </button>
                     )}
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-surface-800 hover:text-slate-200"
+                      onClick={() => onEdit(routine)}
+                    >
+                      Edit
+                    </button>
                     <button
                       type="button"
                       className="cursor-pointer rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-surface-800 hover:text-slate-200"
