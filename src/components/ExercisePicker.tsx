@@ -16,6 +16,7 @@ interface ExercisePickerProps {
   addedIds: string[];
   notes?: Record<string, string>;
   onAdd: (exercise: ExerciseIndexItem) => void;
+  onRemove: (exercise: ExerciseIndexItem) => void;
   onCreateCustom: (name: string) => Promise<ExerciseIndexItem>;
   onClose: () => void;
   onOpenDetail: (exercise: ExerciseIndexItem) => void;
@@ -78,6 +79,7 @@ export function ExercisePicker({
   addedIds,
   notes,
   onAdd,
+  onRemove,
   onCreateCustom,
   onClose,
   onOpenDetail,
@@ -89,6 +91,7 @@ export function ExercisePicker({
   const [category, setCategory] = useState<string | null>(null);
   const [level, setLevel] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<Set<string>>(() => new Set());
+  const [justRemoved, setJustRemoved] = useState<Set<string>>(() => new Set());
   const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -158,14 +161,54 @@ export function ExercisePicker({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  function addOne(ex: ExerciseIndexItem) {
-    onAdd(ex);
-    setJustAdded((prev) => {
-      if (prev.has(ex.id)) return prev;
+  function isAdded(id: string) {
+    if (justRemoved.has(id)) return false;
+    return addedSet.has(id) || justAdded.has(id);
+  }
+
+  function markAdded(id: string) {
+    setJustRemoved((prev) => {
+      if (!prev.has(id)) return prev;
       const next = new Set(prev);
-      next.add(ex.id);
+      next.delete(id);
       return next;
     });
+    setJustAdded((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
+
+  function markRemoved(id: string) {
+    setJustAdded((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    setJustRemoved((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }
+
+  function addOne(ex: ExerciseIndexItem) {
+    if (isAdded(ex.id)) return;
+    onAdd(ex);
+    markAdded(ex.id);
+  }
+
+  function toggleOne(ex: ExerciseIndexItem) {
+    if (isAdded(ex.id)) {
+      onRemove(ex);
+      markRemoved(ex.id);
+      return;
+    }
+    addOne(ex);
   }
 
   async function createCustom(name: string) {
@@ -195,7 +238,7 @@ export function ExercisePicker({
   }
 
   function renderRow(ex: ExerciseIndexItem) {
-    const added = addedSet.has(ex.id) || justAdded.has(ex.id);
+    const added = isAdded(ex.id);
     return (
       <div
         key={ex.id}
@@ -207,7 +250,7 @@ export function ExercisePicker({
       >
         <button
           type="button"
-          onClick={() => addOne(ex)}
+          onClick={() => toggleOne(ex)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <Thumb sha={sha} ex={ex} />
@@ -237,13 +280,14 @@ export function ExercisePicker({
         </button>
         <button
           type="button"
-          onClick={() => addOne(ex)}
+          onClick={() => toggleOne(ex)}
           className={`flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border text-xs font-bold transition ${
             added
               ? 'border-brand-500 bg-brand-500 text-surface-950'
               : 'border-surface-600 text-slate-400'
           }`}
-          aria-label={added ? `${ex.name} added` : `Add ${ex.name}`}
+          aria-label={added ? `Remove ${ex.name}` : `Add ${ex.name}`}
+          aria-pressed={added}
         >
           {added ? '✓' : '+'}
         </button>

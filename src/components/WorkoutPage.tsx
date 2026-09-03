@@ -402,6 +402,17 @@ export function WorkoutPage() {
     }
   }
 
+  async function removeExercise(section: DaySection, exerciseId: string) {
+    try {
+      const current = sectionEntriesFor(section);
+      const next = current.filter((entry) => entry.exerciseId !== exerciseId);
+      if (next.length === current.length) return;
+      await persistSection(section, next);
+    } catch {
+      /* keep picker open so the user can retry */
+    }
+  }
+
   async function applyTemplate(
     kind: TemplateKind,
     template: ExerciseTemplate,
@@ -918,6 +929,7 @@ export function WorkoutPage() {
           addedIds={sectionEntriesFor(pickerSection).map((entry) => entry.exerciseId)}
           notes={exerciseNotes}
           onAdd={(item) => void addExercises([item], pickerSection)}
+          onRemove={(item) => void removeExercise(pickerSection, item.id)}
           onCreateCustom={ensureCustomExercise}
           onClose={() => void closePicker()}
           onOpenDetail={(ex) => {
