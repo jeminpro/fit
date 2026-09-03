@@ -8,6 +8,28 @@ export interface ExerciseIndexItem {
   hasImages: boolean;
 }
 
+export const CUSTOM_EXERCISE_PREFIX = 'custom:';
+export const MAX_CUSTOM_EXERCISES = 100;
+export const MAX_CUSTOM_NAME_LENGTH = 80;
+export const MAX_EXERCISE_NOTE_LENGTH = 280;
+
+export function isCustomExerciseId(id: string): boolean {
+  return id.startsWith(CUSTOM_EXERCISE_PREFIX);
+}
+
+export function makeCustomExercise(name: string): ExerciseIndexItem {
+  const trimmed = name.trim().slice(0, MAX_CUSTOM_NAME_LENGTH);
+  return {
+    id: `${CUSTOM_EXERCISE_PREFIX}${crypto.randomUUID()}`,
+    name: trimmed,
+    primaryMuscles: [],
+    equipment: null,
+    category: 'custom',
+    level: null,
+    hasImages: false,
+  };
+}
+
 export interface ExerciseDetail {
   instructions: string[];
   secondaryMuscles: string[];

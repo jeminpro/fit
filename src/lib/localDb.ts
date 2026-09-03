@@ -101,6 +101,8 @@ export function createLocalProfile(data: Omit<Profile, 'id'>): string {
     goals: data.goals ?? {},
     recentExerciseIds: data.recentExerciseIds,
     favouriteExerciseIds: data.favouriteExerciseIds,
+    customExercises: data.customExercises,
+    exerciseNotes: data.exerciseNotes,
     routines: data.routines,
     weeklyPlan: data.weeklyPlan,
     warmupTemplates: data.warmupTemplates,

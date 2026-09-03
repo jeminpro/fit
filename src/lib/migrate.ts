@@ -27,6 +27,8 @@ export async function migrateLocalToFirebase(
       goals: profile.goals,
       recentExerciseIds: profile.recentExerciseIds,
       favouriteExerciseIds: profile.favouriteExerciseIds,
+      customExercises: profile.customExercises,
+      exerciseNotes: profile.exerciseNotes,
       routines: profile.routines,
       weeklyPlan: profile.weeklyPlan,
       warmupTemplates: profile.warmupTemplates,

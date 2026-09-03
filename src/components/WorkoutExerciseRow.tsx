@@ -11,6 +11,8 @@ interface WorkoutExerciseRowProps {
   units: UnitSystem;
   primaryMuscle?: string;
   dragHandleProps?: DragHandleProps;
+  hasImages?: boolean;
+  note?: string;
   onToggleSet: (setIndex: number) => void;
   onOpenDetail: () => void;
   onRemove: () => void;
@@ -22,6 +24,8 @@ export function WorkoutExerciseRow({
   units,
   primaryMuscle,
   dragHandleProps,
+  hasImages = true,
+  note,
   onToggleSet,
   onOpenDetail,
   onRemove,
@@ -40,7 +44,11 @@ export function WorkoutExerciseRow({
         {dragHandleProps && (
           <button
             type="button"
-            className="flex h-11 w-8 shrink-0 cursor-grab touch-none items-center justify-center self-center rounded-md text-slate-500 transition hover:bg-surface-800 hover:text-slate-300 active:cursor-grabbing"
+            className={`flex h-11 w-8 shrink-0 touch-none items-center justify-center self-center rounded-md transition ${
+              dragHandleProps['aria-grabbed']
+                ? 'bg-brand-500/20 text-brand-300'
+                : 'text-slate-500 hover:bg-surface-800 hover:text-slate-300'
+            }`}
             {...dragHandleProps}
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
@@ -58,12 +66,18 @@ export function WorkoutExerciseRow({
           onClick={onOpenDetail}
           className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-surface-700 bg-surface-800"
         >
-          <img
-            src={exerciseImageUrl(sha, entry.exerciseId, 0)}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          {hasImages ? (
+            <img
+              src={exerciseImageUrl(sha, entry.exerciseId, 0)}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              Custom
+            </span>
+          )}
         </button>
 
         <div className="min-w-0 flex-1">
@@ -81,6 +95,11 @@ export function WorkoutExerciseRow({
                 {durationLabel}
                 {weightLabel}
               </p>
+              {note && (
+                <p className="mt-1 line-clamp-2 text-xs italic text-slate-400">
+                  {note}
+                </p>
+              )}
             </button>
             <button
               type="button"

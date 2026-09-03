@@ -168,6 +168,8 @@ export async function createProfile(
     goals: data.goals ?? {},
     recentExerciseIds: data.recentExerciseIds,
     favouriteExerciseIds: data.favouriteExerciseIds,
+    customExercises: data.customExercises,
+    exerciseNotes: data.exerciseNotes,
     routines: data.routines,
     weeklyPlan: data.weeklyPlan,
     warmupTemplates: data.warmupTemplates,
@@ -185,6 +187,19 @@ export async function updateProfile(
 ): Promise<void> {
   await withTimeout(
     setDoc(profileRef(uid, profileId), stripUndefinedDeep(updates), { merge: true }),
+    15000,
+    'Failed to update profile',
+  );
+}
+
+/** Replaces the whole notes map so removed keys are actually dropped. */
+export async function setExerciseNotes(
+  uid: string,
+  profileId: string,
+  exerciseNotes: Record<string, string>,
+): Promise<void> {
+  await withTimeout(
+    updateDoc(profileRef(uid, profileId), { exerciseNotes }),
     15000,
     'Failed to update profile',
   );

@@ -3,6 +3,7 @@ import {
   exerciseImageUrl,
   filterExercises,
   formatLabel,
+  isCustomExerciseId,
   uniqueFacets,
   type ExerciseIndexItem,
 } from '../lib/exerciseCatalog';
@@ -13,7 +14,9 @@ interface ExercisePickerProps {
   favouriteIds: string[];
   recentIds: string[];
   addedIds: string[];
+  notes?: Record<string, string>;
   onAdd: (exercise: ExerciseIndexItem) => void;
+  onCreateCustom: (name: string) => Promise<ExerciseIndexItem>;
   onClose: () => void;
   onOpenDetail: (exercise: ExerciseIndexItem) => void;
   title?: string;
@@ -49,13 +52,33 @@ function FacetSelect({
   );
 }
 
+function Thumb({ sha, ex }: { sha: string; ex: ExerciseIndexItem }) {
+  if (!ex.hasImages) {
+    return (
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-surface-700 bg-surface-800 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+        Custom
+      </div>
+    );
+  }
+  return (
+    <img
+      src={exerciseImageUrl(sha, ex.id, 0)}
+      alt=""
+      className="h-12 w-12 shrink-0 rounded-lg border border-surface-700 object-cover"
+      loading="lazy"
+    />
+  );
+}
+
 export function ExercisePicker({
   exercises,
   sha,
   favouriteIds,
   recentIds,
   addedIds,
+  notes,
   onAdd,
+  onCreateCustom,
   onClose,
   onOpenDetail,
   title = 'Add exercises',
@@ -66,27 +89,38 @@ export function ExercisePicker({
   const [category, setCategory] = useState<string | null>(null);
   const [level, setLevel] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<Set<string>>(() => new Set());
+  const [creating, setCreating] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createdItems, setCreatedItems] = useState<ExerciseIndexItem[]>([]);
   const addedSet = useMemo(() => new Set(addedIds), [addedIds]);
 
-  const facets = useMemo(() => uniqueFacets(exercises), [exercises]);
+  const allExercises = useMemo(() => {
+    if (createdItems.length === 0) return exercises;
+    const seen = new Set(exercises.map((e) => e.id));
+    return [...createdItems.filter((e) => !seen.has(e.id)), ...exercises];
+  }, [createdItems, exercises]);
+
+  const facets = useMemo(() => uniqueFacets(allExercises), [allExercises]);
   const byId = useMemo(
-    () => new Map(exercises.map((e) => [e.id, e])),
-    [exercises],
+    () => new Map(allExercises.map((e) => [e.id, e])),
+    [allExercises],
   );
 
   const filtered = useMemo(
     () =>
-      filterExercises(exercises, {
+      filterExercises(allExercises, {
         query,
         muscle,
         equipment,
         category,
         level,
       }),
-    [exercises, query, muscle, equipment, category, level],
+    [allExercises, query, muscle, equipment, category, level],
   );
 
   const showBrowseSections = !query.trim() && !muscle && !equipment && !category && !level;
+  const trimmedQuery = query.trim();
 
   const favourites = useMemo(
     () => favouriteIds.map((id) => byId.get(id)).filter(Boolean) as ExerciseIndexItem[],
@@ -99,6 +133,22 @@ export function ExercisePicker({
         .filter((e): e is ExerciseIndexItem => Boolean(e) && !favouriteIds.includes(e.id)),
     [recentIds, byId, favouriteIds],
   );
+  const customExercises = useMemo(
+    () => allExercises.filter((e) => isCustomExerciseId(e.id)),
+    [allExercises],
+  );
+  const browseCatalog = useMemo(
+    () =>
+      showBrowseSections
+        ? filtered.filter((e) => !isCustomExerciseId(e.id))
+        : filtered,
+    [filtered, showBrowseSections],
+  );
+  const exactNameExists = useMemo(() => {
+    if (!trimmedQuery) return false;
+    const needle = trimmedQuery.toLowerCase();
+    return allExercises.some((e) => e.name.toLowerCase() === needle);
+  }, [allExercises, trimmedQuery]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -118,6 +168,32 @@ export function ExercisePicker({
     });
   }
 
+  async function createCustom(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || creating) return;
+    const existing = allExercises.find(
+      (e) => e.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) {
+      addOne(existing);
+      setShowCreateForm(false);
+      setCreateName('');
+      return;
+    }
+    setCreating(true);
+    try {
+      const created = await onCreateCustom(trimmed);
+      setCreatedItems((prev) =>
+        prev.some((e) => e.id === created.id) ? prev : [created, ...prev],
+      );
+      addOne(created);
+      setShowCreateForm(false);
+      setCreateName('');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   function renderRow(ex: ExerciseIndexItem) {
     const added = addedSet.has(ex.id) || justAdded.has(ex.id);
     return (
@@ -134,18 +210,22 @@ export function ExercisePicker({
           onClick={() => addOne(ex)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
-          <img
-            src={exerciseImageUrl(sha, ex.id, 0)}
-            alt=""
-            className="h-12 w-12 shrink-0 rounded-lg border border-surface-700 object-cover"
-            loading="lazy"
-          />
+          <Thumb sha={sha} ex={ex} />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-100">{ex.name}</p>
             <p className="truncate text-xs text-slate-400">
-              {ex.primaryMuscles.map(formatLabel).join(', ')}
-              {ex.equipment ? ` · ${formatLabel(ex.equipment)}` : ''}
+              {isCustomExerciseId(ex.id)
+                ? 'Custom'
+                : [
+                    ex.primaryMuscles.map(formatLabel).join(', '),
+                    ex.equipment ? formatLabel(ex.equipment) : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
             </p>
+            {notes?.[ex.id] && (
+              <p className="truncate text-xs italic text-slate-500">{notes[ex.id]}</p>
+            )}
           </div>
         </button>
         <button
@@ -222,6 +302,16 @@ export function ExercisePicker({
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3">
+          {trimmedQuery && !exactNameExists && (
+            <button
+              type="button"
+              disabled={creating}
+              onClick={() => void createCustom(trimmedQuery)}
+              className="btn-secondary w-full px-3 py-2.5 text-sm"
+            >
+              {creating ? 'Creating…' : `Create “${trimmedQuery}”`}
+            </button>
+          )}
           {showBrowseSections && favourites.length > 0 && (
             <section>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -238,22 +328,72 @@ export function ExercisePicker({
               <div className="space-y-2">{recents.map(renderRow)}</div>
             </section>
           )}
-          <section>
-            {showBrowseSections && (favourites.length > 0 || recents.length > 0) && (
+          {showBrowseSections && customExercises.length > 0 && (
+            <section>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                All exercises
+                Your exercises
               </h3>
-            )}
+              <div className="space-y-2">{customExercises.map(renderRow)}</div>
+            </section>
+          )}
+          <section>
+            {showBrowseSections &&
+              (favourites.length > 0 || recents.length > 0 || customExercises.length > 0) && (
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  All exercises
+                </h3>
+              )}
             <div className="space-y-2">
-              {filtered.length === 0 ? (
+              {browseCatalog.length === 0 ? (
                 <p className="py-8 text-center text-sm text-slate-500">
                   No exercises match your filters.
                 </p>
               ) : (
-                filtered.map(renderRow)
+                browseCatalog.map(renderRow)
               )}
             </div>
           </section>
+        </div>
+
+        <div className="border-t border-surface-800 bg-surface-900 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {showCreateForm ? (
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void createCustom(createName);
+              }}
+            >
+              <input
+                className="input flex-1"
+                type="text"
+                placeholder="Exercise name"
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                autoFocus
+                maxLength={80}
+              />
+              <button
+                type="submit"
+                className="btn-primary shrink-0 px-3 py-2 text-sm"
+                disabled={creating || !createName.trim()}
+              >
+                {creating ? 'Creating…' : 'Create'}
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="btn-secondary w-full px-4 py-2.5 text-sm"
+              disabled={creating}
+              onClick={() => {
+                setCreateName(trimmedQuery);
+                setShowCreateForm(true);
+              }}
+            >
+              Create custom exercise
+            </button>
+          )}
         </div>
       </div>
     </div>

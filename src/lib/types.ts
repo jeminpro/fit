@@ -1,3 +1,4 @@
+import type { ExerciseIndexItem } from './exerciseCatalog';
 import type { ExerciseTemplate, Routine, WeeklyPlan } from './workoutTypes';
 
 export type UnitSystem = 'metric' | 'imperial';
@@ -36,6 +37,8 @@ export interface Profile {
   goals: ProfileGoals;
   recentExerciseIds?: string[];
   favouriteExerciseIds?: string[];
+  customExercises?: ExerciseIndexItem[];
+  exerciseNotes?: Record<string, string>;
   routines?: Routine[];
   weeklyPlan?: WeeklyPlan;
   warmupTemplates?: ExerciseTemplate[];

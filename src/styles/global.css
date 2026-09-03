@@ -49,6 +49,33 @@ button:disabled {
   cursor: not-allowed;
 }
 
+button[aria-grabbed] {
+  cursor: grab;
+}
+
+button[aria-grabbed='true'] {
+  cursor: grabbing;
+}
+
+html[data-reordering],
+html[data-reordering] * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+@keyframes drag-lift {
+  from {
+    transform: scale(1) rotate(0deg);
+  }
+  to {
+    transform: scale(1.04) rotate(1deg);
+  }
+}
+
+@utility drag-lift {
+  animation: drag-lift 140ms ease-out forwards;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;

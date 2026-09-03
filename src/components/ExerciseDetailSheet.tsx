@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import {
   exerciseImageUrl,
   formatLabel,
   getExerciseDetail,
+  isCustomExerciseId,
+  MAX_EXERCISE_NOTE_LENGTH,
   youtubeSearchUrl,
   type ExerciseDetail,
   type ExerciseIndexItem,
@@ -25,6 +27,8 @@ interface ExerciseDetailSheetProps {
   initial?: ExercisePlanDraft;
   isFavourite?: boolean;
   onToggleFavourite?: () => void;
+  note?: string;
+  onSaveNote?: (note: string) => void;
   onSave?: (draft: ExercisePlanDraft) => void;
   onClose: () => void;
   saveLabel?: string;
@@ -37,12 +41,16 @@ export function ExerciseDetailSheet({
   initial,
   isFavourite,
   onToggleFavourite,
+  note,
+  onSaveNote,
   onSave,
   onClose,
   saveLabel = 'Save',
 }: ExerciseDetailSheetProps) {
   const [detail, setDetail] = useState<ExerciseDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(
+    () => !isCustomExerciseId(exercise.id),
+  );
   const [sets, setSets] = useState(String(initial?.sets ?? 3));
   const [reps, setReps] = useState(String(initial?.reps ?? 10));
   const [durationSec, setDurationSec] = useState(
@@ -52,9 +60,21 @@ export function ExerciseDetailSheet({
     if (initial?.weight == null) return '';
     return String(fromCanonical('weight', initial.weight, units));
   });
+  const [noteDraft, setNoteDraft] = useState(note ?? '');
+  const noteDraftRef = useRef(noteDraft);
+  noteDraftRef.current = noteDraft;
+
+  useEffect(() => {
+    setNoteDraft(note ?? '');
+  }, [exercise.id, note]);
 
   useEffect(() => {
     let cancelled = false;
+    if (isCustomExerciseId(exercise.id)) {
+      setDetail(null);
+      setLoadingDetail(false);
+      return;
+    }
     setLoadingDetail(true);
     void getExerciseDetail(exercise.id).then((d) => {
       if (!cancelled) {
@@ -67,7 +87,20 @@ export function ExerciseDetailSheet({
     };
   }, [exercise.id]);
 
+  function flushNote() {
+    if (!onSaveNote) return;
+    const next = noteDraftRef.current.trim();
+    const prev = (note ?? '').trim();
+    if (next !== prev) onSaveNote(next);
+  }
+
+  function handleClose() {
+    flushNote();
+    onClose();
+  }
+
   function handleSave() {
+    flushNote();
     if (!onSave) return;
     const setsNum = Math.max(1, Math.round(Number(sets) || 3));
     const repsNum = Math.max(1, Math.round(Number(reps) || 10));
@@ -118,7 +151,7 @@ export function ExerciseDetailSheet({
             )}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="cursor-pointer rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-surface-800 hover:text-slate-200"
             >
               Close
@@ -164,7 +197,11 @@ export function ExerciseDetailSheet({
               ))}
             </ol>
           ) : (
-            <p className="mt-2 text-sm text-slate-500">No instructions available.</p>
+            <p className="mt-2 text-sm text-slate-500">
+              {isCustomExerciseId(exercise.id)
+                ? 'Custom exercise — no built-in instructions. Try YouTube below.'
+                : 'No instructions available.'}
+            </p>
           )}
         </div>
 
@@ -176,6 +213,21 @@ export function ExerciseDetailSheet({
         >
           Watch on YouTube →
         </a>
+
+        {onSaveNote && (
+          <label className="mt-5 block">
+            <span className="text-sm font-semibold text-slate-200">Your note</span>
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value.slice(0, MAX_EXERCISE_NOTE_LENGTH))}
+              onBlur={flushNote}
+              rows={2}
+              maxLength={MAX_EXERCISE_NOTE_LENGTH}
+              className="input mt-2 text-sm"
+              placeholder="Cues, setup, or anything to remember"
+            />
+          </label>
+        )}
 
         {onSave && (
           <div className="mt-5 space-y-3 border-t border-surface-800 pt-4">

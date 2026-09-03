@@ -26,6 +26,7 @@ import {
   updateUserPrefs,
   createProfile as createRemoteProfile,
   updateProfile as updateRemoteProfile,
+  setExerciseNotes as setRemoteExerciseNotes,
   deleteProfile as deleteRemoteProfile,
   addMeasurement as addRemoteMeasurement,
   addMeasurementsBatch as addRemoteMeasurementsBatch,
@@ -76,6 +77,13 @@ import type {
   WeeklyPlan,
   ExerciseTemplate,
 } from '../lib/workoutTypes';
+import {
+  MAX_CUSTOM_EXERCISES,
+  MAX_CUSTOM_NAME_LENGTH,
+  MAX_EXERCISE_NOTE_LENGTH,
+  makeCustomExercise,
+  type ExerciseIndexItem,
+} from '../lib/exerciseCatalog';
 
 const MAX_RECENT_EXERCISES = 20;
 
@@ -123,6 +131,8 @@ interface AppContextValue {
   upsertWorkoutDay: (dayId: string, input: WorkoutDayInput) => Promise<void>;
   pushRecentExercises: (exerciseIds: string[]) => Promise<void>;
   toggleFavouriteExercise: (exerciseId: string) => Promise<void>;
+  setExerciseNote: (exerciseId: string, note: string) => Promise<void>;
+  ensureCustomExercise: (name: string) => Promise<ExerciseIndexItem>;
   saveRoutines: (routines: Routine[]) => Promise<void>;
   saveWeeklyPlan: (weeklyPlan: WeeklyPlan) => Promise<void>;
   saveWarmupTemplates: (templates: ExerciseTemplate[]) => Promise<void>;
@@ -294,6 +304,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       null
     );
   }, [prefs, orderedProfiles]);
+
+  const customExercisesRef = useRef<ExerciseIndexItem[]>([]);
+  useEffect(() => {
+    customExercisesRef.current = activeProfile?.customExercises ?? [];
+  }, [activeProfile?.id, activeProfile?.customExercises]);
+
+  const exerciseNotesRef = useRef<Record<string, string>>({});
+  useEffect(() => {
+    exerciseNotesRef.current = activeProfile?.exerciseNotes ?? {};
+  }, [activeProfile?.id, activeProfile?.exerciseNotes]);
 
   useEffect(() => {
     if (user && activeProfile) {
@@ -567,6 +587,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await updateProfile(activeProfile.id, { favouriteExerciseIds: next });
   }
 
+  async function setExerciseNote(exerciseId: string, note: string) {
+    if (!activeProfile) return;
+    const trimmed = note.trim().slice(0, MAX_EXERCISE_NOTE_LENGTH);
+    const previous = exerciseNotesRef.current;
+    const next = { ...previous };
+    if (trimmed) {
+      next[exerciseId] = trimmed;
+    } else {
+      delete next[exerciseId];
+    }
+    if ((previous[exerciseId] ?? '') === trimmed) return;
+    exerciseNotesRef.current = next;
+    setProfiles((list) =>
+      list.map((profile) =>
+        profile.id === activeProfile.id
+          ? { ...profile, exerciseNotes: next }
+          : profile,
+      ),
+    );
+    try {
+      if (user) {
+        await setRemoteExerciseNotes(user.uid, activeProfile.id, next);
+      } else {
+        updateLocalProfile(activeProfile.id, { exerciseNotes: next });
+        refreshGuestData();
+      }
+    } catch (error) {
+      exerciseNotesRef.current = previous;
+      setProfiles((list) =>
+        list.map((profile) =>
+          profile.id === activeProfile.id
+            ? { ...profile, exerciseNotes: previous }
+            : profile,
+        ),
+      );
+      throw error;
+    }
+  }
+
+  async function ensureCustomExercise(name: string): Promise<ExerciseIndexItem> {
+    if (!activeProfile) throw new Error('No active profile');
+    const trimmed = name.trim().slice(0, MAX_CUSTOM_NAME_LENGTH);
+    if (!trimmed) throw new Error('Exercise name is required');
+    const existing = customExercisesRef.current.find(
+      (exercise) => exercise.name.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) return existing;
+    const item = makeCustomExercise(trimmed);
+    const previous = customExercisesRef.current;
+    const next = [item, ...previous].slice(0, MAX_CUSTOM_EXERCISES);
+    customExercisesRef.current = next;
+    try {
+      await updateProfile(activeProfile.id, { customExercises: next });
+    } catch (error) {
+      customExercisesRef.current = previous;
+      throw error;
+    }
+    return item;
+  }
+
   async function saveRoutines(routines: Routine[]) {
     if (!activeProfile) return;
     await updateProfile(activeProfile.id, { routines });
@@ -629,6 +709,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     upsertWorkoutDay,
     pushRecentExercises,
     toggleFavouriteExercise,
+    setExerciseNote,
+    ensureCustomExercise,
     saveRoutines,
     saveWeeklyPlan,
     saveWarmupTemplates,

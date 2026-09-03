@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { addDays, addWeeks, format, parseISO, startOfWeek } from 'date-fns';
 import { useApp } from '../context/AppContext';
 import {
+  isCustomExerciseId,
   loadExerciseIndex,
   prefetchExerciseDetails,
   type ExerciseCatalogIndex,
@@ -89,6 +90,8 @@ export function WorkoutPage() {
     upsertWorkoutDay,
     pushRecentExercises,
     toggleFavouriteExercise,
+    setExerciseNote,
+    ensureCustomExercise,
     saveRoutines,
     saveWeeklyPlan,
     saveWarmupTemplates,
@@ -159,11 +162,19 @@ export function WorkoutPage() {
     };
   }, []);
 
+  const pickerExercises = useMemo(() => {
+    const catalogExercises = catalog?.exercises ?? [];
+    const custom = activeProfile?.customExercises ?? [];
+    if (custom.length === 0) return catalogExercises;
+    const seen = new Set(custom.map((ex) => ex.id));
+    return [...custom, ...catalogExercises.filter((ex) => !seen.has(ex.id))];
+  }, [catalog, activeProfile?.customExercises]);
+
   const exerciseById = useMemo(() => {
     const map = new Map<string, ExerciseIndexItem>();
-    for (const ex of catalog?.exercises ?? []) map.set(ex.id, ex);
+    for (const ex of pickerExercises) map.set(ex.id, ex);
     return map;
-  }, [catalog]);
+  }, [pickerExercises]);
 
   const resolved = useMemo(
     () =>
@@ -652,7 +663,7 @@ export function WorkoutPage() {
         equipment: null,
         category: null,
         level: null,
-        hasImages: true,
+        hasImages: false,
       } satisfies ExerciseIndexItem);
     setEditingSection(section);
     setEditingEntryUid(entry.uid);
@@ -719,6 +730,7 @@ export function WorkoutPage() {
   const dayLabel = formatDayLabel(selectedDay);
   const favouriteIds = activeProfile.favouriteExerciseIds ?? [];
   const recentIds = activeProfile.recentExerciseIds ?? [];
+  const exerciseNotes = activeProfile.exerciseNotes ?? {};
   const routineName = day?.routineName;
 
   let primaryActionLabel = 'Add exercises';
@@ -738,18 +750,25 @@ export function WorkoutPage() {
         items={sectionEntries}
         getKey={(entry) => entry.uid}
         onReorder={(next) => void persistSection(section, next)}
-        renderItem={(entry, dragHandleProps) => (
-          <WorkoutExerciseRow
-            entry={entry}
-            sha={catalog?.sha ?? 'main'}
-            units={units}
-            primaryMuscle={catalogItemFor(entry)?.primaryMuscles[0]}
-            dragHandleProps={dragHandleProps}
-            onToggleSet={(setIndex) => void toggleSet(section, entry.uid, setIndex)}
-            onOpenDetail={() => openEntryDetail(section, entry)}
-            onRemove={() => void removeEntry(section, entry.uid)}
-          />
-        )}
+        renderItem={(entry, dragHandleProps) => {
+          const catalogItem = catalogItemFor(entry);
+          return (
+            <WorkoutExerciseRow
+              entry={entry}
+              sha={catalog?.sha ?? 'main'}
+              units={units}
+              primaryMuscle={catalogItem?.primaryMuscles[0]}
+              hasImages={
+                catalogItem?.hasImages ?? !isCustomExerciseId(entry.exerciseId)
+              }
+              note={exerciseNotes[entry.exerciseId]}
+              dragHandleProps={dragHandleProps}
+              onToggleSet={(setIndex) => void toggleSet(section, entry.uid, setIndex)}
+              onOpenDetail={() => openEntryDetail(section, entry)}
+              onRemove={() => void removeEntry(section, entry.uid)}
+            />
+          );
+        }}
       />
     );
   }
@@ -805,7 +824,7 @@ export function WorkoutPage() {
             type="button"
             className="btn-primary flex-1 px-3 py-2.5 text-sm"
             onClick={() => openPicker('main')}
-            disabled={catalogLoading || Boolean(catalogError)}
+            disabled={catalogLoading}
           >
             {hasMainEntries ? 'Add more' : 'Add exercises'}
           </button>
@@ -856,7 +875,6 @@ export function WorkoutPage() {
         onChange={() => openTemplateSheet('warmup')}
         onAddMore={() => openPicker('warmup')}
         catalogLoading={catalogLoading}
-        catalogError={Boolean(catalogError)}
       >
         {renderRows('warmup', warmupEntries)}
       </WorkoutSectionCard>
@@ -886,20 +904,21 @@ export function WorkoutPage() {
         onChange={() => openTemplateSheet('cooldown')}
         onAddMore={() => openPicker('cooldown')}
         catalogLoading={catalogLoading}
-        catalogError={Boolean(catalogError)}
       >
         {renderRows('cooldown', cooldownEntries)}
       </WorkoutSectionCard>
 
-      {pickerOpen && catalog && (
+      {pickerOpen && (
         <ExercisePicker
           title={pickerTitle(pickerSection)}
-          exercises={catalog.exercises}
-          sha={catalog.sha}
+          exercises={pickerExercises}
+          sha={catalog?.sha ?? ''}
           favouriteIds={favouriteIds}
           recentIds={recentIds}
           addedIds={sectionEntriesFor(pickerSection).map((entry) => entry.exerciseId)}
+          notes={exerciseNotes}
           onAdd={(item) => void addExercises([item], pickerSection)}
+          onCreateCustom={ensureCustomExercise}
           onClose={() => void closePicker()}
           onOpenDetail={(ex) => {
             setEditingEntryUid(null);
@@ -964,10 +983,10 @@ export function WorkoutPage() {
         />
       )}
 
-      {detailExercise && catalog && (
+      {detailExercise && (
         <ExerciseDetailSheet
           exercise={detailExercise}
-          sha={catalog.sha}
+          sha={catalog?.sha ?? ''}
           units={units}
           initial={
             editingEntry
@@ -981,6 +1000,8 @@ export function WorkoutPage() {
           }
           isFavourite={favouriteIds.includes(detailExercise.id)}
           onToggleFavourite={() => void toggleFavouriteExercise(detailExercise.id)}
+          note={exerciseNotes[detailExercise.id]}
+          onSaveNote={(value) => void setExerciseNote(detailExercise.id, value)}
           onSave={(draft) => void saveEntryPlan(draft)}
           onClose={() => {
             setDetailExercise(null);
@@ -1002,7 +1023,6 @@ function WorkoutSectionCard({
   onChange,
   onAddMore,
   catalogLoading,
-  catalogError,
   children,
 }: {
   title: string;
@@ -1011,7 +1031,6 @@ function WorkoutSectionCard({
   onChange: () => void;
   onAddMore: () => void;
   catalogLoading: boolean;
-  catalogError: boolean;
   children: ReactNode;
 }) {
   return (
@@ -1041,7 +1060,7 @@ function WorkoutSectionCard({
               type="button"
               className="btn-secondary px-3 py-1.5 text-xs"
               onClick={onAddMore}
-              disabled={catalogLoading || catalogError}
+              disabled={catalogLoading}
             >
               Add more
             </button>
