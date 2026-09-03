@@ -1,4 +1,4 @@
-import type { Routine, WeeklyPlan } from './workoutTypes';
+import type { ExerciseTemplate, Routine, WeeklyPlan } from './workoutTypes';
 
 export type UnitSystem = 'metric' | 'imperial';
 export type Sex = 'male' | 'female' | 'other';
@@ -38,6 +38,8 @@ export interface Profile {
   favouriteExerciseIds?: string[];
   routines?: Routine[];
   weeklyPlan?: WeeklyPlan;
+  warmupTemplates?: ExerciseTemplate[];
+  cooldownTemplates?: ExerciseTemplate[];
 }
 
 export interface Measurement {

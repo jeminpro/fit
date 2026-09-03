@@ -1,36 +1,102 @@
 import { useState } from 'react';
-import type { Routine } from '../lib/workoutTypes';
+import type { ExerciseTemplate, Routine } from '../lib/workoutTypes';
 import { MAX_ROUTINES } from '../lib/workoutTypes';
+
+export interface RoutineLinks {
+  warmupTemplateId?: string | null;
+  cooldownTemplateId?: string | null;
+}
 
 interface RoutineSheetProps {
   routines: Routine[];
+  warmupTemplates: ExerciseTemplate[];
+  cooldownTemplates: ExerciseTemplate[];
   canSave: boolean;
-  onSave: (name: string) => void;
+  initialWarmupTemplateId?: string;
+  initialCooldownTemplateId?: string;
+  onSave: (name: string, links: RoutineLinks) => void;
   onApply: (routine: Routine) => void;
   onRename: (routineId: string, name: string) => void;
   onDelete: (routineId: string) => void;
+  onSetLinks: (routineId: string, links: RoutineLinks) => void;
   onClose: () => void;
+}
+
+function TemplateSelect({
+  label,
+  value,
+  templates,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  templates: ExerciseTemplate[];
+  onChange: (id: string) => void;
+}) {
+  return (
+    <label className="min-w-0 flex-1">
+      <span className="sr-only">{label}</span>
+      <select
+        className="input py-1.5 text-xs"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <option value="">{label}</option>
+        {templates.map((template) => (
+          <option key={template.id} value={template.id}>
+            {template.name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function linkedNames(
+  routine: Routine,
+  warmupTemplates: ExerciseTemplate[],
+  cooldownTemplates: ExerciseTemplate[],
+): string {
+  const parts = [
+    `${routine.exercises.length} exercise${routine.exercises.length === 1 ? '' : 's'}`,
+  ];
+  const warmup = warmupTemplates.find((t) => t.id === routine.warmupTemplateId);
+  const cooldown = cooldownTemplates.find((t) => t.id === routine.cooldownTemplateId);
+  if (warmup) parts.push(warmup.name);
+  if (cooldown) parts.push(cooldown.name);
+  return parts.join(' · ');
 }
 
 export function RoutineSheet({
   routines,
+  warmupTemplates,
+  cooldownTemplates,
   canSave,
+  initialWarmupTemplateId,
+  initialCooldownTemplateId,
   onSave,
   onApply,
   onRename,
   onDelete,
+  onSetLinks,
   onClose,
 }: RoutineSheetProps) {
   const [name, setName] = useState('');
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [saveWarmupId, setSaveWarmupId] = useState(initialWarmupTemplateId ?? '');
+  const [saveCooldownId, setSaveCooldownId] = useState(initialCooldownTemplateId ?? '');
 
   const atCap = routines.length >= MAX_ROUTINES;
 
   function handleSave() {
     const trimmed = name.trim();
     if (!trimmed || atCap) return;
-    onSave(trimmed);
+    onSave(trimmed, {
+      warmupTemplateId: saveWarmupId || undefined,
+      cooldownTemplateId: saveCooldownId || undefined,
+    });
     setName('');
   }
 
@@ -71,24 +137,40 @@ export function RoutineSheet({
                   You already have {MAX_ROUTINES} routines. Delete one to save another.
                 </p>
               ) : (
-                <div className="flex gap-2">
-                  <input
-                    className="input flex-1"
-                    placeholder="Routine name, e.g. Push"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSave();
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn-primary px-3 py-2 text-sm"
-                    disabled={!name.trim()}
-                    onClick={handleSave}
-                  >
-                    Save
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1"
+                      placeholder="Routine name, e.g. Push"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSave();
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary px-3 py-2 text-sm"
+                      disabled={!name.trim()}
+                      onClick={handleSave}
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1.5 sm:flex-row">
+                    <TemplateSelect
+                      label="No warmup"
+                      value={saveWarmupId}
+                      templates={warmupTemplates}
+                      onChange={setSaveWarmupId}
+                    />
+                    <TemplateSelect
+                      label="No cool down"
+                      value={saveCooldownId}
+                      templates={cooldownTemplates}
+                      onChange={setSaveCooldownId}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -106,53 +188,78 @@ export function RoutineSheet({
               routines.map((routine) => (
                 <div
                   key={routine.id}
-                  className="flex items-center gap-2 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"
+                  className="space-y-2 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"
                 >
-                  {renamingId === routine.id ? (
-                    <input
-                      className="input flex-1 py-1.5 text-sm"
-                      value={renameValue}
-                      autoFocus
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename();
-                        if (e.key === 'Escape') setRenamingId(null);
-                      }}
-                    />
-                  ) : (
+                  <div className="flex items-center gap-2">
+                    {renamingId === routine.id ? (
+                      <input
+                        className="input flex-1 py-1.5 text-sm"
+                        value={renameValue}
+                        autoFocus
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename();
+                          if (e.key === 'Escape') setRenamingId(null);
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left"
+                        onClick={() => onApply(routine)}
+                      >
+                        <p className="truncate text-sm font-medium text-slate-100">
+                          {routine.name}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {linkedNames(routine, warmupTemplates, cooldownTemplates)}
+                        </p>
+                      </button>
+                    )}
                     <button
                       type="button"
-                      className="min-w-0 flex-1 text-left"
-                      onClick={() => onApply(routine)}
+                      className="cursor-pointer rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-surface-800 hover:text-slate-200"
+                      onClick={() => startRename(routine)}
                     >
-                      <p className="truncate text-sm font-medium text-slate-100">
-                        {routine.name}
-                      </p>
-                      <p className="text-xs text-slate-400">
-                        {routine.exercises.length} exercise
-                        {routine.exercises.length === 1 ? '' : 's'}
-                      </p>
+                      Rename
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    className="cursor-pointer rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-surface-800 hover:text-slate-200"
-                    onClick={() => startRename(routine)}
-                  >
-                    Rename
-                  </button>
-                  <button
-                    type="button"
-                    className="cursor-pointer rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-rose-500/10 hover:text-rose-300"
-                    onClick={() => {
-                      if (confirm(`Delete routine “${routine.name}”?`)) {
-                        onDelete(routine.id);
+                    <button
+                      type="button"
+                      className="cursor-pointer rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-rose-500/10 hover:text-rose-300"
+                      onClick={() => {
+                        if (confirm(`Delete routine “${routine.name}”?`)) {
+                          onDelete(routine.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1.5 sm:flex-row">
+                    <TemplateSelect
+                      label="No warmup"
+                      value={routine.warmupTemplateId ?? ''}
+                      templates={warmupTemplates}
+                      onChange={(id) =>
+                        onSetLinks(routine.id, {
+                          warmupTemplateId: id || null,
+                          cooldownTemplateId: routine.cooldownTemplateId ?? null,
+                        })
                       }
-                    }}
-                  >
-                    Delete
-                  </button>
+                    />
+                    <TemplateSelect
+                      label="No cool down"
+                      value={routine.cooldownTemplateId ?? ''}
+                      templates={cooldownTemplates}
+                      onChange={(id) =>
+                        onSetLinks(routine.id, {
+                          warmupTemplateId: routine.warmupTemplateId ?? null,
+                          cooldownTemplateId: id || null,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
               ))
             )}

@@ -29,6 +29,8 @@ export async function migrateLocalToFirebase(
       favouriteExerciseIds: profile.favouriteExerciseIds,
       routines: profile.routines,
       weeklyPlan: profile.weeklyPlan,
+      warmupTemplates: profile.warmupTemplates,
+      cooldownTemplates: profile.cooldownTemplates,
     });
     profileIdMap.set(profile.id, newId);
 
@@ -64,8 +66,16 @@ export async function migrateLocalToFirebase(
         day.id,
         stripUndefined({
           entries: day.entries,
+          warmupEntries: day.warmupEntries,
+          cooldownEntries: day.cooldownEntries,
           completedAt: day.completedAt,
           note: day.note,
+          routineId: day.routineId,
+          routineName: day.routineName,
+          warmupTemplateId: day.warmupTemplateId,
+          warmupTemplateName: day.warmupTemplateName,
+          cooldownTemplateId: day.cooldownTemplateId,
+          cooldownTemplateName: day.cooldownTemplateName,
         }),
       );
     }

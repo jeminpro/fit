@@ -69,7 +69,13 @@ import type {
   HabitDayInput,
   MeasurementInput,
 } from '../lib/types';
-import type { WorkoutDay, WorkoutDayInput, Routine, WeeklyPlan } from '../lib/workoutTypes';
+import type {
+  WorkoutDay,
+  WorkoutDayInput,
+  Routine,
+  WeeklyPlan,
+  ExerciseTemplate,
+} from '../lib/workoutTypes';
 
 const MAX_RECENT_EXERCISES = 20;
 
@@ -119,6 +125,8 @@ interface AppContextValue {
   toggleFavouriteExercise: (exerciseId: string) => Promise<void>;
   saveRoutines: (routines: Routine[]) => Promise<void>;
   saveWeeklyPlan: (weeklyPlan: WeeklyPlan) => Promise<void>;
+  saveWarmupTemplates: (templates: ExerciseTemplate[]) => Promise<void>;
+  saveCooldownTemplates: (templates: ExerciseTemplate[]) => Promise<void>;
   getProfileExportData: (
     profile: Profile,
   ) => Promise<{
@@ -569,6 +577,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await updateProfile(activeProfile.id, { weeklyPlan });
   }
 
+  async function saveWarmupTemplates(templates: ExerciseTemplate[]) {
+    if (!activeProfile) return;
+    await updateProfile(activeProfile.id, { warmupTemplates: templates });
+  }
+
+  async function saveCooldownTemplates(templates: ExerciseTemplate[]) {
+    if (!activeProfile) return;
+    await updateProfile(activeProfile.id, { cooldownTemplates: templates });
+  }
+
   async function getProfileExportData(profile: Profile) {
     if (user) {
       return exportProfileData(user.uid, profile);
@@ -613,6 +631,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toggleFavouriteExercise,
     saveRoutines,
     saveWeeklyPlan,
+    saveWarmupTemplates,
+    saveCooldownTemplates,
     getProfileExportData,
   };
 

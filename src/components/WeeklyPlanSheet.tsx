@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Routine, Weekday, WeeklyPlan } from '../lib/workoutTypes';
+import type { ExerciseTemplate, Routine, Weekday, WeeklyPlan } from '../lib/workoutTypes';
 import {
   WEEKDAY_LABELS,
   WEEKDAYS,
@@ -8,6 +8,8 @@ import {
 
 interface WeeklyPlanSheetProps {
   routines: Routine[];
+  warmupTemplates: ExerciseTemplate[];
+  cooldownTemplates: ExerciseTemplate[];
   weeklyPlan?: WeeklyPlan;
   onSave: (plan: WeeklyPlan) => void;
   onClose: () => void;
@@ -15,6 +17,8 @@ interface WeeklyPlanSheetProps {
 
 export function WeeklyPlanSheet({
   routines,
+  warmupTemplates,
+  cooldownTemplates,
   weeklyPlan,
   onSave,
   onClose,
@@ -51,30 +55,48 @@ export function WeeklyPlanSheet({
               Save a routine first, then you can repeat it across the week.
             </p>
           )}
-          {WEEKDAYS.map((day) => (
-            <label
-              key={day}
-              className="flex items-center justify-between gap-3 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"
-            >
-              <span className="w-10 text-sm font-semibold text-slate-200">
-                {WEEKDAY_LABELS[day]}
-              </span>
-              <select
-                className="input py-2 text-sm"
-                value={plan[day] ?? ''}
-                onChange={(e) =>
-                  setDay(day, e.target.value === '' ? null : e.target.value)
-                }
+          {WEEKDAYS.map((day) => {
+            const routineId = plan[day];
+            const routine = routines.find((r) => r.id === routineId);
+            const warmup = warmupTemplates.find(
+              (t) => t.id === routine?.warmupTemplateId,
+            );
+            const cooldown = cooldownTemplates.find(
+              (t) => t.id === routine?.cooldownTemplateId,
+            );
+            const extras = [warmup?.name, cooldown?.name].filter(Boolean);
+            return (
+              <label
+                key={day}
+                className="flex items-center justify-between gap-3 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"
               >
-                <option value="">Rest</option>
-                {routines.map((routine) => (
-                  <option key={routine.id} value={routine.id}>
-                    {routine.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
+                <span className="w-10 text-sm font-semibold text-slate-200">
+                  {WEEKDAY_LABELS[day]}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <select
+                    className="input py-2 text-sm"
+                    value={plan[day] ?? ''}
+                    onChange={(e) =>
+                      setDay(day, e.target.value === '' ? null : e.target.value)
+                    }
+                  >
+                    <option value="">Rest</option>
+                    {routines.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                  {extras.length > 0 && (
+                    <p className="mt-1 truncate text-[11px] text-slate-500">
+                      {extras.join(' · ')}
+                    </p>
+                  )}
+                </div>
+              </label>
+            );
+          })}
         </div>
 
         <div className="border-t border-surface-800 px-4 py-3">

@@ -103,6 +103,8 @@ export function createLocalProfile(data: Omit<Profile, 'id'>): string {
     favouriteExerciseIds: data.favouriteExerciseIds,
     routines: data.routines,
     weeklyPlan: data.weeklyPlan,
+    warmupTemplates: data.warmupTemplates,
+    cooldownTemplates: data.cooldownTemplates,
   };
   store.profiles.push(profile);
   store.measurements[id] = [];
@@ -226,6 +228,23 @@ export function getLocalWorkoutDays(profileId: string): WorkoutDay[] {
   return loadLocalStore().workoutDays[profileId] ?? [];
 }
 
+function applyOptionalDayField(
+  day: WorkoutDay,
+  key:
+    | 'completedAt'
+    | 'note'
+    | 'routineId'
+    | 'routineName'
+    | 'warmupTemplateId'
+    | 'warmupTemplateName'
+    | 'cooldownTemplateId'
+    | 'cooldownTemplateName',
+  value: string | null | undefined,
+): void {
+  if (value === null) delete day[key];
+  else if (value !== undefined) day[key] = value;
+}
+
 export function upsertLocalWorkoutDay(
   profileId: string,
   dayId: string,
@@ -237,23 +256,31 @@ export function upsertLocalWorkoutDay(
   const existing = store.workoutDays[profileId].find((d) => d.id === dayId);
   if (existing) {
     if (cleaned.entries !== undefined) existing.entries = cleaned.entries;
-    if (cleaned.completedAt === null) delete existing.completedAt;
-    else if (cleaned.completedAt !== undefined) existing.completedAt = cleaned.completedAt;
-    if (cleaned.note === null) delete existing.note;
-    else if (cleaned.note !== undefined) existing.note = cleaned.note;
-    if (cleaned.routineId === null) delete existing.routineId;
-    else if (cleaned.routineId !== undefined) existing.routineId = cleaned.routineId;
-    if (cleaned.routineName === null) delete existing.routineName;
-    else if (cleaned.routineName !== undefined) existing.routineName = cleaned.routineName;
+    if (cleaned.warmupEntries !== undefined) existing.warmupEntries = cleaned.warmupEntries;
+    if (cleaned.cooldownEntries !== undefined) existing.cooldownEntries = cleaned.cooldownEntries;
+    applyOptionalDayField(existing, 'completedAt', cleaned.completedAt);
+    applyOptionalDayField(existing, 'note', cleaned.note);
+    applyOptionalDayField(existing, 'routineId', cleaned.routineId);
+    applyOptionalDayField(existing, 'routineName', cleaned.routineName);
+    applyOptionalDayField(existing, 'warmupTemplateId', cleaned.warmupTemplateId);
+    applyOptionalDayField(existing, 'warmupTemplateName', cleaned.warmupTemplateName);
+    applyOptionalDayField(existing, 'cooldownTemplateId', cleaned.cooldownTemplateId);
+    applyOptionalDayField(existing, 'cooldownTemplateName', cleaned.cooldownTemplateName);
   } else {
     const day: WorkoutDay = {
       id: dayId,
       entries: cleaned.entries ?? [],
     };
+    if (cleaned.warmupEntries) day.warmupEntries = cleaned.warmupEntries;
+    if (cleaned.cooldownEntries) day.cooldownEntries = cleaned.cooldownEntries;
     if (cleaned.completedAt) day.completedAt = cleaned.completedAt;
     if (cleaned.note) day.note = cleaned.note;
     if (cleaned.routineId) day.routineId = cleaned.routineId;
     if (cleaned.routineName) day.routineName = cleaned.routineName;
+    if (cleaned.warmupTemplateId) day.warmupTemplateId = cleaned.warmupTemplateId;
+    if (cleaned.warmupTemplateName) day.warmupTemplateName = cleaned.warmupTemplateName;
+    if (cleaned.cooldownTemplateId) day.cooldownTemplateId = cleaned.cooldownTemplateId;
+    if (cleaned.cooldownTemplateName) day.cooldownTemplateName = cleaned.cooldownTemplateName;
     store.workoutDays[profileId].push(day);
   }
   saveLocalStore(store);

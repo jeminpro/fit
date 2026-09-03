@@ -1,6 +1,14 @@
 import { format, parseISO } from 'date-fns';
-import type { WorkoutDay } from '../lib/workoutTypes';
+import { allDayEntries, type WorkoutDay } from '../lib/workoutTypes';
 import { formatDayLabel } from '../lib/dates';
+
+function copySummary(day: WorkoutDay): string {
+  const total = allDayEntries(day).length;
+  const parts = [`${total} exercise${total === 1 ? '' : 's'}`];
+  if ((day.warmupEntries?.length ?? 0) > 0) parts.push('warmup');
+  if ((day.cooldownEntries?.length ?? 0) > 0) parts.push('cool down');
+  return parts.join(' · ');
+}
 
 interface CopyWorkoutSheetProps {
   days: WorkoutDay[];
@@ -46,7 +54,7 @@ export function CopyWorkoutSheet({ days, onCopy, onClose }: CopyWorkoutSheetProp
                     </p>
                   </div>
                   <span className="text-xs text-slate-500">
-                    {day.entries.length} exercise{day.entries.length === 1 ? '' : 's'}
+                    {copySummary(day)}
                   </span>
                 </div>
               </button>

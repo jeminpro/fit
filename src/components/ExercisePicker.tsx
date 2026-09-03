@@ -12,34 +12,40 @@ interface ExercisePickerProps {
   sha: string;
   favouriteIds: string[];
   recentIds: string[];
-  onAdd: (selected: ExerciseIndexItem[]) => void;
+  addedIds: string[];
+  onAdd: (exercise: ExerciseIndexItem) => void;
   onClose: () => void;
   onOpenDetail: (exercise: ExerciseIndexItem) => void;
+  title?: string;
 }
 
-type FacetKey = 'muscle' | 'equipment' | 'category' | 'level';
-
-function Chip({
-  active,
+function FacetSelect({
   label,
-  onClick,
+  value,
+  options,
+  onChange,
 }: {
-  active: boolean;
   label: string;
-  onClick: () => void;
+  value: string | null;
+  options: string[];
+  onChange: (value: string | null) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 cursor-pointer rounded-full border px-3 py-1 text-xs font-medium transition ${
-        active
-          ? 'border-brand-500/60 bg-brand-500/15 text-brand-300'
-          : 'border-surface-700 bg-surface-900/60 text-slate-300 hover:border-slate-500'
-      }`}
-    >
-      {label}
-    </button>
+    <label className="min-w-0">
+      <span className="sr-only">{label}</span>
+      <select
+        className="input !px-2 !py-1.5 text-xs"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value || null)}
+      >
+        <option value="">{label}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {formatLabel(option)}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -48,16 +54,19 @@ export function ExercisePicker({
   sha,
   favouriteIds,
   recentIds,
+  addedIds,
   onAdd,
   onClose,
   onOpenDetail,
+  title = 'Add exercises',
 }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
   const [equipment, setEquipment] = useState<string | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [level, setLevel] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [justAdded, setJustAdded] = useState<Set<string>>(() => new Set());
+  const addedSet = useMemo(() => new Set(addedIds), [addedIds]);
 
   const facets = useMemo(() => uniqueFacets(exercises), [exercises]);
   const byId = useMemo(
@@ -99,48 +108,30 @@ export function ExercisePicker({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  function toggle(id: string) {
-    setSelected((prev) => {
+  function addOne(ex: ExerciseIndexItem) {
+    onAdd(ex);
+    setJustAdded((prev) => {
+      if (prev.has(ex.id)) return prev;
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.add(ex.id);
       return next;
     });
   }
 
-  function toggleFacet(key: FacetKey, value: string) {
-    const setters = {
-      muscle: setMuscle,
-      equipment: setEquipment,
-      category: setCategory,
-      level: setLevel,
-    } as const;
-    const current = { muscle, equipment, category, level }[key];
-    setters[key](current === value ? null : value);
-  }
-
-  function handleAdd() {
-    const items = [...selected]
-      .map((id) => byId.get(id))
-      .filter((e): e is ExerciseIndexItem => Boolean(e));
-    if (items.length === 0) return;
-    onAdd(items);
-  }
-
   function renderRow(ex: ExerciseIndexItem) {
-    const isSelected = selected.has(ex.id);
+    const added = addedSet.has(ex.id) || justAdded.has(ex.id);
     return (
       <div
         key={ex.id}
         className={`flex items-center gap-3 rounded-xl border px-2.5 py-2 transition ${
-          isSelected
+          added
             ? 'border-brand-500/50 bg-brand-500/10'
             : 'border-surface-700/60 bg-surface-900/40'
         }`}
       >
         <button
           type="button"
-          onClick={() => toggle(ex.id)}
+          onClick={() => addOne(ex)}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <img
@@ -166,15 +157,15 @@ export function ExercisePicker({
         </button>
         <button
           type="button"
-          onClick={() => toggle(ex.id)}
-          aria-pressed={isSelected}
+          onClick={() => addOne(ex)}
           className={`flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border text-xs font-bold transition ${
-            isSelected
+            added
               ? 'border-brand-500 bg-brand-500 text-surface-950'
               : 'border-surface-600 text-slate-400'
           }`}
+          aria-label={added ? `${ex.name} added` : `Add ${ex.name}`}
         >
-          {isSelected ? '✓' : '+'}
+          {added ? '✓' : '+'}
         </button>
       </div>
     );
@@ -185,13 +176,13 @@ export function ExercisePicker({
       <div className="flex h-[92vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:h-[85vh] sm:rounded-2xl">
         <div className="sticky top-0 z-10 border-b border-surface-800 bg-surface-900/95 px-4 pb-3 pt-4 backdrop-blur">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-100">Add exercises</h2>
+            <h2 className="text-lg font-bold text-slate-100">{title}</h2>
             <button
               type="button"
               onClick={onClose}
               className="cursor-pointer rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-surface-800 hover:text-slate-200"
             >
-              Close
+              Done
             </button>
           </div>
           <input
@@ -202,45 +193,31 @@ export function ExercisePicker({
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
           />
-          <div className="mt-3 space-y-2">
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {facets.muscles.map((m) => (
-                <Chip
-                  key={m}
-                  label={formatLabel(m)}
-                  active={muscle === m}
-                  onClick={() => toggleFacet('muscle', m)}
-                />
-              ))}
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {facets.equipment.map((e) => (
-                <Chip
-                  key={e}
-                  label={formatLabel(e)}
-                  active={equipment === e}
-                  onClick={() => toggleFacet('equipment', e)}
-                />
-              ))}
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
-              {facets.levels.map((l) => (
-                <Chip
-                  key={l}
-                  label={formatLabel(l)}
-                  active={level === l}
-                  onClick={() => toggleFacet('level', l)}
-                />
-              ))}
-              {facets.categories.map((c) => (
-                <Chip
-                  key={c}
-                  label={formatLabel(c)}
-                  active={category === c}
-                  onClick={() => toggleFacet('category', c)}
-                />
-              ))}
-            </div>
+          <div className="mt-2 grid grid-cols-2 gap-1.5">
+            <FacetSelect
+              label="All muscles"
+              value={muscle}
+              options={facets.muscles}
+              onChange={setMuscle}
+            />
+            <FacetSelect
+              label="All equipment"
+              value={equipment}
+              options={facets.equipment}
+              onChange={setEquipment}
+            />
+            <FacetSelect
+              label="All levels"
+              value={level}
+              options={facets.levels}
+              onChange={setLevel}
+            />
+            <FacetSelect
+              label="All categories"
+              value={category}
+              options={facets.categories}
+              onChange={setCategory}
+            />
           </div>
         </div>
 
@@ -277,18 +254,6 @@ export function ExercisePicker({
               )}
             </div>
           </section>
-        </div>
-
-        <div className="border-t border-surface-800 bg-surface-900 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <button
-            type="button"
-            className="btn-primary w-full px-4 py-3 text-sm"
-            disabled={selected.size === 0}
-            onClick={handleAdd}
-          >
-            Add {selected.size > 0 ? selected.size : ''} exercise
-            {selected.size === 1 ? '' : 's'}
-          </button>
         </div>
       </div>
     </div>

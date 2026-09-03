@@ -170,6 +170,8 @@ export async function createProfile(
     favouriteExerciseIds: data.favouriteExerciseIds,
     routines: data.routines,
     weeklyPlan: data.weeklyPlan,
+    warmupTemplates: data.warmupTemplates,
+    cooldownTemplates: data.cooldownTemplates,
   });
 
   await withTimeout(setDoc(ref, profile), 15000, 'Failed to save profile');
@@ -369,6 +371,10 @@ export async function upsertWorkoutDay(
   if (cleaned.note === null) payload.note = null;
   if (cleaned.routineId === null) payload.routineId = null;
   if (cleaned.routineName === null) payload.routineName = null;
+  if (cleaned.warmupTemplateId === null) payload.warmupTemplateId = null;
+  if (cleaned.warmupTemplateName === null) payload.warmupTemplateName = null;
+  if (cleaned.cooldownTemplateId === null) payload.cooldownTemplateId = null;
+  if (cleaned.cooldownTemplateName === null) payload.cooldownTemplateName = null;
   await setDoc(ref, stripUndefinedDeep(payload), { merge: true });
 }
 

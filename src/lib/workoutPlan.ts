@@ -1,8 +1,11 @@
 import { getISODay, parseISO } from 'date-fns';
 import {
+  allDayEntries,
   emptyLog,
+  type ExerciseTemplate,
   type PlannedExercise,
   type Routine,
+  type TemplateKind,
   type Weekday,
   type WeeklyPlan,
   type WorkoutDay,
@@ -67,6 +70,74 @@ export function cloneEntries(
   });
 }
 
+export function findTemplate(
+  templates: ExerciseTemplate[] | undefined,
+  id: string | undefined | null,
+): ExerciseTemplate | undefined {
+  if (!id) return undefined;
+  return (templates ?? []).find((template) => template.id === id);
+}
+
+export function applyRoutineSections(
+  dayKey: string,
+  routine: Routine,
+  warmupTemplates?: ExerciseTemplate[],
+  cooldownTemplates?: ExerciseTemplate[],
+): Pick<
+  WorkoutDay,
+  | 'entries'
+  | 'warmupEntries'
+  | 'cooldownEntries'
+  | 'routineId'
+  | 'routineName'
+  | 'warmupTemplateId'
+  | 'warmupTemplateName'
+  | 'cooldownTemplateId'
+  | 'cooldownTemplateName'
+> {
+  const next: Pick<
+    WorkoutDay,
+    | 'entries'
+    | 'warmupEntries'
+    | 'cooldownEntries'
+    | 'routineId'
+    | 'routineName'
+    | 'warmupTemplateId'
+    | 'warmupTemplateName'
+    | 'cooldownTemplateId'
+    | 'cooldownTemplateName'
+  > = {
+    entries: cloneEntries(
+      routine.exercises,
+      (ex, index) => `${dayKey}:${ex.uid}:${index}`,
+    ),
+    routineId: routine.id,
+    routineName: routine.name,
+  };
+
+  const warmup = findTemplate(warmupTemplates, routine.warmupTemplateId);
+  if (warmup && warmup.exercises.length > 0) {
+    next.warmupEntries = cloneEntries(
+      warmup.exercises,
+      (ex, index) => `${dayKey}:wu:${ex.uid}:${index}`,
+    );
+    next.warmupTemplateId = warmup.id;
+    next.warmupTemplateName = warmup.name;
+  }
+
+  const cooldown = findTemplate(cooldownTemplates, routine.cooldownTemplateId);
+  if (cooldown && cooldown.exercises.length > 0) {
+    next.cooldownEntries = cloneEntries(
+      cooldown.exercises,
+      (ex, index) => `${dayKey}:cd:${ex.uid}:${index}`,
+    );
+    next.cooldownTemplateId = cooldown.id;
+    next.cooldownTemplateName = cooldown.name;
+  }
+
+  return next;
+}
+
 export interface ResolvedWorkoutDay {
   day: WorkoutDay | null;
   derived: boolean;
@@ -77,6 +148,8 @@ export function resolveDay(
   stored: WorkoutDay | undefined,
   routines: Routine[] | undefined,
   weeklyPlan: WeeklyPlan | undefined,
+  warmupTemplates?: ExerciseTemplate[],
+  cooldownTemplates?: ExerciseTemplate[],
 ): ResolvedWorkoutDay {
   if (stored) return { day: stored, derived: false };
 
@@ -91,12 +164,7 @@ export function resolveDay(
   return {
     day: {
       id: dayKey,
-      entries: cloneEntries(
-        routine.exercises,
-        (ex, index) => `${dayKey}:${ex.uid}:${index}`,
-      ),
-      routineId: routine.id,
-      routineName: routine.name,
+      ...applyRoutineSections(dayKey, routine, warmupTemplates, cooldownTemplates),
     },
     derived: true,
   };
@@ -108,7 +176,7 @@ export function recentWorkoutDays(
   limit = 8,
 ): WorkoutDay[] {
   return [...map.values()]
-    .filter((d) => d.id < beforeKey && d.entries.length > 0)
+    .filter((d) => d.id < beforeKey && allDayEntries(d).length > 0)
     .sort((a, b) => b.id.localeCompare(a.id))
     .slice(0, limit);
 }
@@ -122,4 +190,32 @@ export function clearRoutineFromPlan(
     if (next[day] === routineId) next[day] = null;
   }
   return next;
+}
+
+export function clearTemplateFromRoutines(
+  routines: Routine[],
+  templateId: string,
+  kind: TemplateKind,
+): Routine[] {
+  return routines.map((routine) => {
+    if (kind === 'warmup' && routine.warmupTemplateId === templateId) {
+      const next = { ...routine };
+      delete next.warmupTemplateId;
+      return next;
+    }
+    if (kind === 'cooldown' && routine.cooldownTemplateId === templateId) {
+      const next = { ...routine };
+      delete next.cooldownTemplateId;
+      return next;
+    }
+    return routine;
+  });
+}
+
+export function templateLabel(kind: TemplateKind): string {
+  return kind === 'warmup' ? 'Warm up' : 'Cool down';
+}
+
+export function templateNameSuffix(kind: TemplateKind): string {
+  return kind === 'warmup' ? 'warmup' : 'cool down';
 }

@@ -14,6 +14,7 @@ import type { UnitSystem } from '../lib/types';
 export interface ExercisePlanDraft {
   sets: number;
   reps: number;
+  durationSec?: number;
   weight?: number;
 }
 
@@ -44,6 +45,9 @@ export function ExerciseDetailSheet({
   const [loadingDetail, setLoadingDetail] = useState(true);
   const [sets, setSets] = useState(String(initial?.sets ?? 3));
   const [reps, setReps] = useState(String(initial?.reps ?? 10));
+  const [durationSec, setDurationSec] = useState(
+    initial?.durationSec != null ? String(initial.durationSec) : '',
+  );
   const [weight, setWeight] = useState(() => {
     if (initial?.weight == null) return '';
     return String(fromCanonical('weight', initial.weight, units));
@@ -67,10 +71,15 @@ export function ExerciseDetailSheet({
     if (!onSave) return;
     const setsNum = Math.max(1, Math.round(Number(sets) || 3));
     const repsNum = Math.max(1, Math.round(Number(reps) || 10));
+    const durationNum = durationSec.trim() === '' ? undefined : Number(durationSec);
     const weightNum = weight.trim() === '' ? undefined : Number(weight);
     onSave({
       sets: setsNum,
       reps: repsNum,
+      durationSec:
+        durationNum != null && Number.isFinite(durationNum) && durationNum > 0
+          ? Math.round(durationNum)
+          : undefined,
       weight:
         weightNum != null && Number.isFinite(weightNum) && weightNum > 0
           ? toCanonical('weight', weightNum, units)
@@ -82,7 +91,7 @@ export function ExerciseDetailSheet({
   const frame1 = exerciseImageUrl(sha, exercise.id, 1);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-surface-700 bg-surface-900 p-5 shadow-2xl shadow-black/50">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -171,7 +180,7 @@ export function ExerciseDetailSheet({
         {onSave && (
           <div className="mt-5 space-y-3 border-t border-surface-800 pt-4">
             <h3 className="text-sm font-semibold text-slate-200">Plan</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <label className="block text-xs text-slate-400">
                 Sets
                 <input
@@ -192,6 +201,18 @@ export function ExerciseDetailSheet({
                   inputMode="numeric"
                   value={reps}
                   onChange={(e) => setReps(e.target.value)}
+                />
+              </label>
+              <label className="block text-xs text-slate-400">
+                Time (sec)
+                <input
+                  className="input mt-1"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  placeholder="Optional"
+                  value={durationSec}
+                  onChange={(e) => setDurationSec(e.target.value)}
                 />
               </label>
               <label className="block text-xs text-slate-400">

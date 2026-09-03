@@ -3,12 +3,14 @@ import { fromCanonical, unitLabel } from '../lib/units';
 import type { UnitSystem } from '../lib/types';
 import type { WorkoutEntry } from '../lib/workoutTypes';
 import { emptyLog } from '../lib/workoutTypes';
+import type { DragHandleProps } from './ReorderableList';
 
 interface WorkoutExerciseRowProps {
   entry: WorkoutEntry;
   sha: string;
   units: UnitSystem;
   primaryMuscle?: string;
+  dragHandleProps?: DragHandleProps;
   onToggleSet: (setIndex: number) => void;
   onOpenDetail: () => void;
   onRemove: () => void;
@@ -19,11 +21,14 @@ export function WorkoutExerciseRow({
   sha,
   units,
   primaryMuscle,
+  dragHandleProps,
   onToggleSet,
   onOpenDetail,
   onRemove,
 }: WorkoutExerciseRowProps) {
   const slots = entry.log.length > 0 ? entry.log : emptyLog(entry.sets);
+  const durationLabel =
+    entry.durationSec != null ? ` · ${entry.durationSec}s` : '';
   const weightLabel =
     entry.weight != null
       ? ` · ${fromCanonical('weight', entry.weight, units)} ${unitLabel('weight', units)}`
@@ -31,7 +36,23 @@ export function WorkoutExerciseRow({
 
   return (
     <div className={`card p-3 ${entry.skipped ? 'opacity-50' : ''}`}>
-      <div className="flex gap-3">
+      <div className="flex gap-2 sm:gap-3">
+        {dragHandleProps && (
+          <button
+            type="button"
+            className="flex h-11 w-8 shrink-0 cursor-grab touch-none items-center justify-center self-center rounded-md text-slate-500 transition hover:bg-surface-800 hover:text-slate-300 active:cursor-grabbing"
+            {...dragHandleProps}
+          >
+            <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+              <circle cx="7" cy="5" r="1.6" fill="currentColor" />
+              <circle cx="13" cy="5" r="1.6" fill="currentColor" />
+              <circle cx="7" cy="10" r="1.6" fill="currentColor" />
+              <circle cx="13" cy="10" r="1.6" fill="currentColor" />
+              <circle cx="7" cy="15" r="1.6" fill="currentColor" />
+              <circle cx="13" cy="15" r="1.6" fill="currentColor" />
+            </svg>
+          </button>
+        )}
         <button
           type="button"
           onClick={onOpenDetail}
@@ -57,6 +78,7 @@ export function WorkoutExerciseRow({
               </p>
               <p className="mt-0.5 text-xs text-slate-400">
                 {entry.sets} × {entry.reps}
+                {durationLabel}
                 {weightLabel}
               </p>
             </button>
