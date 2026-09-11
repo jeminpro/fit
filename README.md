@@ -10,6 +10,18 @@ Track body measurements and daily habits for you and your family. Built with Ast
 - **Body** — measurement dashboard, weekly check-in wizard, history charts (including height growth for kids)
 - **You** — multi-profile management, units, goals, CSV/JSON export, sign out
 
+## Exercise catalog
+
+The Workout tab exercise list is a **static catalog**, not Firestore. It is copied from [yuhonas/free-exercise-db](https://github.com/yuhonas/free-exercise-db) into `public/data/exercises.index.json` and `public/data/exercises.details.json`. Images are loaded from jsDelivr at runtime.
+
+Refresh the local copy with:
+
+```bash
+npm run sync:exercises
+```
+
+Custom exercises you add in the app are stored with your profile data (Firestore when signed in, otherwise locally).
+
 ## Setup
 
 1. Copy `.env.example` to `.env` and add your Firebase project keys.
