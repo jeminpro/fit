@@ -1064,6 +1064,7 @@ export function WorkoutPage() {
           catalogLoading={catalogLoading}
           onChange={(next) => void updateRoutine(next as Routine)}
           onCreateCustom={ensureCustomExercise}
+          onSaveNote={(id, note) => void setExerciseNote(id, note)}
           onClose={() => {
             setEditingRoutineId(null);
             setRoutineOpen(true);

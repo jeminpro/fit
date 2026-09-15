@@ -105,6 +105,7 @@ export function TemplatesPage({
     saveWeeklyPlan,
     saveWarmupTemplates,
     saveCooldownTemplates,
+    setExerciseNote,
     activeProfile,
   } = useApp();
 
@@ -360,6 +361,7 @@ export function TemplatesPage({
             void persistTemplate(editing.kind, next);
           }}
           onCreateCustom={onCreateCustom}
+          onSaveNote={(id, note) => void setExerciseNote(id, note)}
           onDelete={() => void deleteTemplate(editing.kind, editing.template.id)}
           onClose={() => setEditing(null)}
         />

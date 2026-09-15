@@ -32,6 +32,7 @@ interface RoutineEditorProps {
   catalogLoading: boolean;
   onChange: (template: ExerciseTemplate | Routine) => void;
   onCreateCustom: (name: string) => Promise<ExerciseIndexItem>;
+  onSaveNote?: (exerciseId: string, note: string) => void;
   onDelete?: () => void;
   onClose: () => void;
 }
@@ -98,6 +99,7 @@ export function RoutineEditor({
   catalogLoading,
   onChange,
   onCreateCustom,
+  onSaveNote,
   onDelete,
   onClose,
 }: RoutineEditorProps) {
@@ -341,6 +343,11 @@ export function RoutineEditor({
                             ? ` · ${formatLabel(catalogItem.primaryMuscles[0])}`
                             : ''}
                         </p>
+                        {notes[exercise.exerciseId] && (
+                          <p className="mt-0.5 line-clamp-2 text-xs italic text-slate-400">
+                            {notes[exercise.exerciseId]}
+                          </p>
+                        )}
                       </button>
                       <button
                         type="button"
@@ -413,6 +420,11 @@ export function RoutineEditor({
           }
           isFavourite={favouriteIds.includes(detailExercise.id)}
           note={notes[detailExercise.id]}
+          onSaveNote={
+            onSaveNote
+              ? (value) => onSaveNote(detailExercise.id, value)
+              : undefined
+          }
           onSave={(plan) => savePlan(plan)}
           onClose={() => {
             setDetailExercise(null);
