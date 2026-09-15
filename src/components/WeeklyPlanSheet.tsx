@@ -4,6 +4,7 @@ import {
   WEEKDAY_LABELS,
   WEEKDAYS,
   emptyWeeklyPlan,
+  byName,
 } from '../lib/workoutPlan';
 
 interface WeeklyPlanSheetProps {
@@ -82,7 +83,7 @@ export function WeeklyPlanSheet({
                     }
                   >
                     <option value="">Rest</option>
-                    {routines.map((item) => (
+                    {byName(routines).map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
                       </option>

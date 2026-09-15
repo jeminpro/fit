@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ExerciseTemplate, TemplateKind } from '../lib/workoutTypes';
 import { MAX_TEMPLATES } from '../lib/workoutTypes';
-import { templateLabel } from '../lib/workoutPlan';
+import { templateLabel, byName } from '../lib/workoutPlan';
 
 interface TemplateSheetProps {
   kind: TemplateKind;
@@ -134,7 +134,7 @@ export function TemplateSheet({
                 save the exercises on this day.
               </p>
             ) : (
-              templates.map((template) => (
+              byName(templates).map((template) => (
                 <div
                   key={template.id}
                   className="flex items-center gap-2 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"

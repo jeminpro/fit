@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ExerciseTemplate, Routine } from '../lib/workoutTypes';
 import { MAX_ROUTINES } from '../lib/workoutTypes';
+import { byName } from '../lib/workoutPlan';
 
 export interface RoutineLinks {
   warmupTemplateId?: string | null;
@@ -44,7 +45,7 @@ export function TemplateSelect({
         onClick={(e) => e.stopPropagation()}
       >
         <option value="">{label}</option>
-        {templates.map((template) => (
+        {byName(templates).map((template) => (
           <option key={template.id} value={template.id}>
             {template.name}
           </option>
@@ -187,7 +188,7 @@ export function RoutineSheet({
                 No routines yet. Add one in Templates, or plan a day and save it.
               </p>
             ) : (
-              routines.map((routine) => (
+              byName(routines).map((routine) => (
                 <div
                   key={routine.id}
                   className="space-y-2 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"

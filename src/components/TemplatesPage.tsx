@@ -11,6 +11,7 @@ import {
 import {
   clearRoutineFromPlan,
   clearTemplateFromRoutines,
+  byName,
 } from '../lib/workoutPlan';
 import {
   RoutineEditor,
@@ -79,12 +80,6 @@ function routineSummary(
   if (warmup) parts.push(warmup.name);
   if (cooldown) parts.push(cooldown.name);
   return parts.join(' · ');
-}
-
-function byName<T extends { name: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
-  );
 }
 
 function upsertById<T extends { id: string }>(list: T[], next: T, cap: number): T[] {

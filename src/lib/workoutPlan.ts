@@ -219,3 +219,9 @@ export function templateLabel(kind: TemplateKind): string {
 export function templateNameSuffix(kind: TemplateKind): string {
   return kind === 'warmup' ? 'warmup' : 'cool down';
 }
+
+export function byName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  );
+}
