@@ -32,6 +32,7 @@ interface RoutineEditorProps {
   catalogLoading: boolean;
   onChange: (template: ExerciseTemplate | Routine) => void;
   onCreateCustom: (name: string) => Promise<ExerciseIndexItem>;
+  onDelete?: () => void;
   onClose: () => void;
 }
 
@@ -97,6 +98,7 @@ export function RoutineEditor({
   catalogLoading,
   onChange,
   onCreateCustom,
+  onDelete,
   onClose,
 }: RoutineEditorProps) {
   const noun = editorNoun(kind);
@@ -358,6 +360,18 @@ export function RoutineEditor({
               current exercises.
             </p>
           </div>
+
+          {onDelete && (
+            <button
+              type="button"
+              className="w-full cursor-pointer rounded-xl border border-rose-500/30 py-2.5 text-sm font-semibold text-rose-400 transition hover:border-rose-500/60 hover:bg-rose-500/10"
+              onClick={() => {
+                if (confirm(`Delete ${noun} “${draft.name}”?`)) onDelete();
+              }}
+            >
+              Delete {noun}
+            </button>
+          )}
         </div>
       </div>
 

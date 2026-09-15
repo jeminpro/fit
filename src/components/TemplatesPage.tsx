@@ -119,11 +119,6 @@ export function TemplatesPage({
 
   const [addingKind, setAddingKind] = useState<TemplateEditorKind | null>(null);
   const [newName, setNewName] = useState('');
-  const [renaming, setRenaming] = useState<{
-    kind: TemplateEditorKind;
-    id: string;
-  } | null>(null);
-  const [renameValue, setRenameValue] = useState('');
   const [editing, setEditing] = useState<{
     kind: TemplateEditorKind;
     template: ExerciseTemplate | Routine;
@@ -192,18 +187,6 @@ export function TemplatesPage({
     setEditing({ kind, template });
   }
 
-  async function renameTemplate(
-    kind: TemplateEditorKind,
-    id: string,
-    name: string,
-  ) {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const current = itemsFor(kind).find((item) => item.id === id);
-    if (!current || current.name === trimmed) return;
-    await persistTemplate(kind, { ...current, name: trimmed });
-  }
-
   async function deleteTemplate(kind: TemplateEditorKind, id: string) {
     await enqueueWrite(async () => {
       if (kind === 'routine') {
@@ -242,19 +225,6 @@ export function TemplatesPage({
   function startAdd(kind: TemplateEditorKind) {
     setAddingKind(kind);
     setNewName('');
-    setRenaming(null);
-  }
-
-  function startRename(kind: TemplateEditorKind, item: ExerciseTemplate) {
-    setRenaming({ kind, id: item.id });
-    setRenameValue(item.name);
-    setAddingKind(null);
-  }
-
-  function commitRename() {
-    if (!renaming) return;
-    void renameTemplate(renaming.kind, renaming.id, renameValue);
-    setRenaming(null);
   }
 
   function summaryFor(kind: TemplateEditorKind, item: ExerciseTemplate | Routine) {
@@ -344,55 +314,19 @@ export function TemplatesPage({
         {items.length > 0 && (
           <div className="space-y-2">
             {items.map((item) => (
-              <div
+              <button
                 key={item.id}
-                className="flex flex-wrap items-center gap-2 rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5"
+                type="button"
+                className="w-full cursor-pointer rounded-xl border border-surface-700/60 bg-surface-900/40 px-3 py-2.5 text-left transition hover:border-slate-500"
+                onClick={() => setEditing({ kind, template: item })}
               >
-                {renaming?.kind === kind && renaming.id === item.id ? (
-                  <input
-                    className="input min-w-0 flex-1 py-1.5 text-sm"
-                    value={renameValue}
-                    autoFocus
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={commitRename}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitRename();
-                      if (e.key === 'Escape') setRenaming(null);
-                    }}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="min-w-0 flex-1 text-left"
-                    onClick={() => setEditing({ kind, template: item })}
-                  >
-                    <p className="truncate text-sm font-medium text-slate-100">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      {summaryFor(kind, item)}
-                    </p>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-surface-800 hover:text-slate-200"
-                  onClick={() => startRename(kind, item)}
-                >
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  className="shrink-0 cursor-pointer rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-rose-500/10 hover:text-rose-300"
-                  onClick={() => {
-                    if (confirm(`Delete ${noun} “${item.name}”?`)) {
-                      void deleteTemplate(kind, item.id);
-                    }
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
+                <p className="truncate text-sm font-medium text-slate-100">
+                  {item.name}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {summaryFor(kind, item)}
+                </p>
+              </button>
             ))}
           </div>
         )}
@@ -426,6 +360,7 @@ export function TemplatesPage({
             void persistTemplate(editing.kind, next);
           }}
           onCreateCustom={onCreateCustom}
+          onDelete={() => void deleteTemplate(editing.kind, editing.template.id)}
           onClose={() => setEditing(null)}
         />
       )}
