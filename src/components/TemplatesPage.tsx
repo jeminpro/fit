@@ -81,6 +81,12 @@ function routineSummary(
   return parts.join(' · ');
 }
 
+function byName<T extends { name: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+  );
+}
+
 function upsertById<T extends { id: string }>(list: T[], next: T, cap: number): T[] {
   const index = list.findIndex((item) => item.id === next.id);
   if (index === -1) return [next, ...list].slice(0, cap);
@@ -236,11 +242,13 @@ export function TemplatesPage({
   }
 
   function renderSection(kind: TemplateEditorKind) {
-    const items = kind === 'routine'
-      ? routines
-      : kind === 'warmup'
-        ? warmupTemplates
-        : cooldownTemplates;
+    const items = byName(
+      kind === 'routine'
+        ? routines
+        : kind === 'warmup'
+          ? warmupTemplates
+          : cooldownTemplates,
+    );
     const atCap = items.length >= capFor(kind);
     const noun = kindNoun(kind);
 
@@ -345,8 +353,8 @@ export function TemplatesPage({
         <RoutineEditor
           kind={editing.kind}
           template={editing.template}
-          warmupTemplates={warmupTemplates}
-          cooldownTemplates={cooldownTemplates}
+          warmupTemplates={byName(warmupTemplates)}
+          cooldownTemplates={byName(cooldownTemplates)}
           exercises={exercises}
           sha={sha}
           units={units}

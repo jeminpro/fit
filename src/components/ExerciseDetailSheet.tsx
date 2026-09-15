@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ExerciseAnimation } from './ExerciseAnimation';
 import {
   exerciseImageUrl,
   formatLabel,
   getExerciseDetail,
   isCustomExerciseId,
-  MAX_EXERCISE_NOTE_LENGTH,
   youtubeSearchUrl,
   type ExerciseDetail,
   type ExerciseIndexItem,
@@ -63,10 +62,18 @@ export function ExerciseDetailSheet({
   const [noteDraft, setNoteDraft] = useState(note ?? '');
   const noteDraftRef = useRef(noteDraft);
   noteDraftRef.current = noteDraft;
+  const noteFieldRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setNoteDraft(note ?? '');
   }, [exercise.id, note]);
+
+  useLayoutEffect(() => {
+    const el = noteFieldRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [noteDraft, onSaveNote]);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,41 +131,44 @@ export function ExerciseDetailSheet({
   const frame1 = exerciseImageUrl(sha, exercise.id, 1);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-surface-700 bg-surface-900 p-5 shadow-2xl shadow-black/50">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-slate-100">{exercise.name}</h2>
-            <p className="mt-1 text-xs text-slate-400">
-              {[exercise.level, exercise.equipment, exercise.category]
-                .filter(Boolean)
-                .map((v) => formatLabel(String(v)))
-                .join(' · ')}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            {onToggleFavourite && (
+    <div className="overlay overlay-nested p-4">
+      <div className="sheet-panel rounded-2xl">
+        <div className="shrink-0 border-b border-surface-800 px-5 py-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-100">{exercise.name}</h2>
+              <p className="mt-1 text-xs text-slate-400">
+                {[exercise.level, exercise.equipment, exercise.category]
+                  .filter(Boolean)
+                  .map((v) => formatLabel(String(v)))
+                  .join(' · ')}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              {onToggleFavourite && (
+                <button
+                  type="button"
+                  onClick={onToggleFavourite}
+                  className={`cursor-pointer rounded-lg px-2 py-1 text-sm transition hover:bg-surface-800 ${
+                    isFavourite ? 'text-brand-400' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  aria-label={isFavourite ? 'Remove favourite' : 'Add favourite'}
+                >
+                  {isFavourite ? '★' : '☆'}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={onToggleFavourite}
-                className={`cursor-pointer rounded-lg px-2 py-1 text-sm transition hover:bg-surface-800 ${
-                  isFavourite ? 'text-brand-400' : 'text-slate-400 hover:text-slate-200'
-                }`}
-                aria-label={isFavourite ? 'Remove favourite' : 'Add favourite'}
+                onClick={handleClose}
+                className="cursor-pointer rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-surface-800 hover:text-slate-200"
               >
-                {isFavourite ? '★' : '☆'}
+                Close
               </button>
-            )}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="cursor-pointer rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-surface-800 hover:text-slate-200"
-            >
-              Close
-            </button>
+            </div>
           </div>
         </div>
 
+        <div className="sheet-body px-5 py-4 pb-6">
         {exercise.hasImages ? (
           <ExerciseAnimation frame0={frame0} frame1={frame1} alt={exercise.name} />
         ) : (
@@ -218,12 +228,12 @@ export function ExerciseDetailSheet({
           <label className="mt-5 block">
             <span className="text-sm font-semibold text-slate-200">Your note</span>
             <textarea
+              ref={noteFieldRef}
               value={noteDraft}
-              onChange={(e) => setNoteDraft(e.target.value.slice(0, MAX_EXERCISE_NOTE_LENGTH))}
+              onChange={(e) => setNoteDraft(e.target.value)}
               onBlur={flushNote}
               rows={2}
-              maxLength={MAX_EXERCISE_NOTE_LENGTH}
-              className="input mt-2 text-sm"
+              className="input mt-2 resize-none overflow-hidden text-sm"
               placeholder="Cues, setup, or anything to remember"
             />
           </label>
@@ -286,6 +296,7 @@ export function ExerciseDetailSheet({
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

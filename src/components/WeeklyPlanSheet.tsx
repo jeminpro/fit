@@ -32,9 +32,9 @@ export function WeeklyPlanSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-surface-800 px-4 py-3">
+    <div className="overlay">
+      <div className="sheet-panel">
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-800 px-4 py-3">
           <h2 className="text-lg font-bold text-slate-100">Weekly plan</h2>
           <button
             type="button"
@@ -45,7 +45,7 @@ export function WeeklyPlanSheet({
           </button>
         </div>
 
-        <div className="space-y-2 overflow-y-auto px-4 py-4">
+        <div className="sheet-body space-y-2 px-4 py-4 pb-6">
           <p className="mb-3 text-sm text-slate-400">
             Assign a routine to each weekday. Empty days stay rest days until you
             plan them. Changing this does not rewrite days you already logged.

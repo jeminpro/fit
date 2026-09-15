@@ -95,8 +95,9 @@ export function CheckinWizard({ onClose }: CheckinWizardProps) {
   const progress = Math.min(stepIndex / steps.length, 1) * 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-surface-700 bg-surface-900 p-6 shadow-2xl shadow-black/50">
+    <div className="overlay p-4">
+      <div className="sheet-panel rounded-2xl">
+        <div className="sheet-body p-6 pb-8">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-100">
             {isReview ? 'Review & save' : 'Check-in'}
@@ -225,6 +226,7 @@ export function CheckinWizard({ onClose }: CheckinWizardProps) {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

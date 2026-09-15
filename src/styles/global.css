@@ -20,6 +20,7 @@
 
 html {
   color-scheme: dark;
+  scrollbar-gutter: stable;
 }
 
 html,
@@ -99,4 +100,22 @@ html[data-reordering] * {
 
 @utility input {
   @apply w-full rounded-xl border border-surface-700 bg-surface-800/80 px-3 py-2.5 text-slate-100 placeholder:text-slate-500 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/25;
+}
+
+@utility overlay {
+  @apply fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4;
+}
+
+@utility overlay-nested {
+  z-index: 90;
+}
+
+@utility sheet-panel {
+  @apply flex w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:rounded-2xl;
+  max-height: min(90dvh, calc(100dvh - env(safe-area-inset-top, 0px)));
+}
+
+@utility sheet-body {
+  @apply min-h-0 flex-1 overflow-y-auto overscroll-contain;
+  scrollbar-gutter: stable;
 }

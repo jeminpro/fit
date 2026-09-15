@@ -85,7 +85,7 @@ export function ExercisePicker({
   onClose,
   onOpenDetail,
   title = 'Add exercises',
-  overlayClassName = 'z-50',
+  overlayClassName = '',
 }: ExercisePickerProps) {
   const [query, setQuery] = useState('');
   const [muscle, setMuscle] = useState<string | null>(null);
@@ -299,9 +299,9 @@ export function ExercisePicker({
   }
 
   return (
-    <div className={`fixed inset-0 ${overlayClassName} flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4`}>
-      <div className="flex h-[92vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:h-[85vh] sm:rounded-2xl">
-        <div className="sticky top-0 z-10 border-b border-surface-800 bg-surface-900/95 px-4 pb-3 pt-4 backdrop-blur">
+    <div className={`overlay ${overlayClassName}`}>
+      <div className="sheet-panel h-[min(92dvh,100dvh)] sm:h-[min(85dvh,100dvh)]">
+        <div className="shrink-0 border-b border-surface-800 bg-surface-900 px-4 pb-3 pt-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-bold text-slate-100">{title}</h2>
             <button
@@ -348,7 +348,7 @@ export function ExercisePicker({
           </div>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3">
+        <div className="sheet-body space-y-4 px-4 py-3 pb-6">
           {trimmedQuery && !exactNameExists && (
             <button
               type="button"

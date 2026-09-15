@@ -253,8 +253,9 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm sm:items-center">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-surface-700 bg-surface-900 p-6 shadow-2xl shadow-black/50">
+    <div className="overlay p-4">
+      <div className="sheet-panel !max-w-2xl rounded-2xl">
+        <div className="sheet-body p-6 pb-8">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-100">
@@ -512,6 +513,7 @@ export function MetricHistory({ type, tip, onClose }: MetricHistoryProps) {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

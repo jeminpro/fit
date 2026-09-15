@@ -46,7 +46,7 @@ const navItems: { route: AppRoute; label: string; icon: () => ReactNode }[] = [
 
 export function BottomNav({ route, onNavigate }: BottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-surface-800 bg-surface-950/90 backdrop-blur-md">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-surface-800 bg-surface-950/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom)]">
         {navItems.map((item) => {
           const active = route === item.route;

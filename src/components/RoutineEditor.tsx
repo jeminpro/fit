@@ -224,9 +224,9 @@ export function RoutineEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-surface-800 px-4 py-3">
+    <div className="overlay">
+      <div className="sheet-panel">
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-800 px-4 py-3">
           <h2 className="text-lg font-bold text-slate-100">{editorTitle(kind)}</h2>
           <button
             type="button"
@@ -240,7 +240,7 @@ export function RoutineEditor({
           </button>
         </div>
 
-        <div className="space-y-4 overflow-y-auto px-4 py-4">
+        <div className="sheet-body space-y-4 px-4 py-4 pb-6">
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Name
@@ -385,7 +385,7 @@ export function RoutineEditor({
       {pickerOpen && (
         <ExercisePicker
           title={`Edit ${noun} exercises`}
-          overlayClassName="z-[55]"
+          overlayClassName="overlay-nested"
           exercises={exercises}
           sha={sha}
           favouriteIds={favouriteIds}

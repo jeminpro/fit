@@ -80,7 +80,6 @@ import type {
 import {
   MAX_CUSTOM_EXERCISES,
   MAX_CUSTOM_NAME_LENGTH,
-  MAX_EXERCISE_NOTE_LENGTH,
   makeCustomExercise,
   type ExerciseIndexItem,
 } from '../lib/exerciseCatalog';
@@ -589,7 +588,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function setExerciseNote(exerciseId: string, note: string) {
     if (!activeProfile) return;
-    const trimmed = note.trim().slice(0, MAX_EXERCISE_NOTE_LENGTH);
+    const trimmed = note.trim();
     const previous = exerciseNotesRef.current;
     const next = { ...previous };
     if (trimmed) {

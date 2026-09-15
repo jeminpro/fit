@@ -11,7 +11,6 @@ export interface ExerciseIndexItem {
 export const CUSTOM_EXERCISE_PREFIX = 'custom:';
 export const MAX_CUSTOM_EXERCISES = 100;
 export const MAX_CUSTOM_NAME_LENGTH = 80;
-export const MAX_EXERCISE_NOTE_LENGTH = 280;
 
 export function isCustomExerciseId(id: string): boolean {
   return id.startsWith(CUSTOM_EXERCISE_PREFIX);

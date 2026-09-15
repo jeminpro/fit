@@ -18,9 +18,9 @@ interface CopyWorkoutSheetProps {
 
 export function CopyWorkoutSheet({ days, onCopy, onClose }: CopyWorkoutSheetProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-surface-800 px-4 py-3">
+    <div className="overlay">
+      <div className="sheet-panel">
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-800 px-4 py-3">
           <h2 className="text-lg font-bold text-slate-100">Copy a previous day</h2>
           <button
             type="button"
@@ -30,7 +30,7 @@ export function CopyWorkoutSheet({ days, onCopy, onClose }: CopyWorkoutSheetProp
             Close
           </button>
         </div>
-        <div className="space-y-2 overflow-y-auto px-4 py-3">
+        <div className="sheet-body space-y-2 px-4 py-3 pb-6">
           {days.length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-500">
               No previous workouts to copy yet.

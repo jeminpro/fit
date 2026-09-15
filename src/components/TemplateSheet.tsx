@@ -59,9 +59,9 @@ export function TemplateSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-surface-800 px-4 py-3">
+    <div className="overlay">
+      <div className="sheet-panel">
+        <div className="flex shrink-0 items-center justify-between border-b border-surface-800 px-4 py-3">
           <h2 className="text-lg font-bold text-slate-100">{label} templates</h2>
           <button
             type="button"
@@ -72,7 +72,7 @@ export function TemplateSheet({
           </button>
         </div>
 
-        <div className="space-y-4 overflow-y-auto px-4 py-4">
+        <div className="sheet-body space-y-4 px-4 py-4 pb-6">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               {canSave ? `Save this ${label.toLowerCase()}` : 'New template'}
