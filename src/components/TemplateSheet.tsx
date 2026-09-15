@@ -130,8 +130,8 @@ export function TemplateSheet({
             </p>
             {templates.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                No {label.toLowerCase()} templates yet. Add exercises, then save,
-                or build a new template from the catalog.
+                No {label.toLowerCase()} templates yet. Add one in Templates, or
+                save the exercises on this day.
               </p>
             ) : (
               templates.map((template) => (

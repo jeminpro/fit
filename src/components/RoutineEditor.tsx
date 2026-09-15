@@ -2,7 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatLabel, type ExerciseIndexItem } from '../lib/exerciseCatalog';
 import { fromCanonical, unitLabel } from '../lib/units';
 import type { UnitSystem } from '../lib/types';
-import type { ExerciseTemplate, PlannedExercise, Routine } from '../lib/workoutTypes';
+import type {
+  ExerciseTemplate,
+  PlannedExercise,
+  Routine,
+  TemplateKind,
+} from '../lib/workoutTypes';
 import { ExercisePicker } from './ExercisePicker';
 import {
   ExerciseDetailSheet,
@@ -11,10 +16,13 @@ import {
 import { ReorderableList } from './ReorderableList';
 import { TemplateSelect } from './RoutineSheet';
 
+export type TemplateEditorKind = 'routine' | TemplateKind;
+
 interface RoutineEditorProps {
-  routine: Routine;
-  warmupTemplates: ExerciseTemplate[];
-  cooldownTemplates: ExerciseTemplate[];
+  kind?: TemplateEditorKind;
+  template: ExerciseTemplate | Routine;
+  warmupTemplates?: ExerciseTemplate[];
+  cooldownTemplates?: ExerciseTemplate[];
   exercises: ExerciseIndexItem[];
   sha: string;
   units: UnitSystem;
@@ -22,9 +30,21 @@ interface RoutineEditorProps {
   recentIds: string[];
   notes: Record<string, string>;
   catalogLoading: boolean;
-  onChange: (routine: Routine) => void;
+  onChange: (template: ExerciseTemplate | Routine) => void;
   onCreateCustom: (name: string) => Promise<ExerciseIndexItem>;
   onClose: () => void;
+}
+
+function editorNoun(kind: TemplateEditorKind): string {
+  if (kind === 'warmup') return 'warmup';
+  if (kind === 'cooldown') return 'cool down';
+  return 'routine';
+}
+
+function editorTitle(kind: TemplateEditorKind): string {
+  if (kind === 'warmup') return 'Edit warmup';
+  if (kind === 'cooldown') return 'Edit cool down';
+  return 'Edit routine';
 }
 
 function newUid(): string {
@@ -64,9 +84,10 @@ function applyDraft(
 }
 
 export function RoutineEditor({
-  routine,
-  warmupTemplates,
-  cooldownTemplates,
+  kind = 'routine',
+  template,
+  warmupTemplates = [],
+  cooldownTemplates = [],
   exercises,
   sha,
   units,
@@ -78,10 +99,11 @@ export function RoutineEditor({
   onCreateCustom,
   onClose,
 }: RoutineEditorProps) {
-  const [draft, setDraft] = useState(routine);
+  const noun = editorNoun(kind);
+  const [draft, setDraft] = useState<Routine>(template as Routine);
   const draftRef = useRef(draft);
   draftRef.current = draft;
-  const [name, setName] = useState(routine.name);
+  const [name, setName] = useState(template.name);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [detailExercise, setDetailExercise] = useState<ExerciseIndexItem | null>(
     null,
@@ -89,10 +111,10 @@ export function RoutineEditor({
   const [editingUid, setEditingUid] = useState<string | null>(null);
 
   useEffect(() => {
-    draftRef.current = routine;
-    setDraft(routine);
-    setName(routine.name);
-  }, [routine.id]);
+    draftRef.current = template as Routine;
+    setDraft(template as Routine);
+    setName(template.name);
+  }, [template.id]);
 
   const exerciseById = useMemo(() => {
     const map = new Map<string, ExerciseIndexItem>();
@@ -109,7 +131,15 @@ export function RoutineEditor({
     if (next === draftRef.current) return;
     draftRef.current = next;
     setDraft(next);
-    onChange(next);
+    if (kind === 'routine') {
+      onChange(next);
+      return;
+    }
+    onChange({
+      id: next.id,
+      name: next.name,
+      exercises: next.exercises,
+    });
   }
 
   function commitName() {
@@ -193,7 +223,7 @@ export function RoutineEditor({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 backdrop-blur-sm sm:items-center sm:p-4">
       <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl border border-surface-700 bg-surface-900 shadow-2xl shadow-black/50 sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-surface-800 px-4 py-3">
-          <h2 className="text-lg font-bold text-slate-100">Edit routine</h2>
+          <h2 className="text-lg font-bold text-slate-100">{editorTitle(kind)}</h2>
           <button
             type="button"
             onClick={() => {
@@ -222,20 +252,22 @@ export function RoutineEditor({
             />
           </label>
 
-          <div className="flex flex-col gap-1.5 sm:flex-row">
-            <TemplateSelect
-              label="No warmup"
-              value={draft.warmupTemplateId ?? ''}
-              templates={warmupTemplates}
-              onChange={(id) => setLinks(id, draft.cooldownTemplateId ?? '')}
-            />
-            <TemplateSelect
-              label="No cool down"
-              value={draft.cooldownTemplateId ?? ''}
-              templates={cooldownTemplates}
-              onChange={(id) => setLinks(draft.warmupTemplateId ?? '', id)}
-            />
-          </div>
+          {kind === 'routine' && (
+            <div className="flex flex-col gap-1.5 sm:flex-row">
+              <TemplateSelect
+                label="No warmup"
+                value={draft.warmupTemplateId ?? ''}
+                templates={warmupTemplates}
+                onChange={(id) => setLinks(id, draft.cooldownTemplateId ?? '')}
+              />
+              <TemplateSelect
+                label="No cool down"
+                value={draft.cooldownTemplateId ?? ''}
+                templates={cooldownTemplates}
+                onChange={(id) => setLinks(draft.warmupTemplateId ?? '', id)}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
@@ -254,7 +286,7 @@ export function RoutineEditor({
 
             {draft.exercises.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                No exercises in this routine yet.
+                No exercises in this {noun} yet.
               </p>
             ) : (
               <ReorderableList
@@ -322,7 +354,7 @@ export function RoutineEditor({
               />
             )}
             <p className="text-xs text-slate-500">
-              Changes update this routine. Days you already logged keep their
+              Changes update this {noun}. Days you already logged keep their
               current exercises.
             </p>
           </div>
@@ -331,7 +363,7 @@ export function RoutineEditor({
 
       {pickerOpen && (
         <ExercisePicker
-          title="Edit routine exercises"
+          title={`Edit ${noun} exercises`}
           overlayClassName="z-[55]"
           exercises={exercises}
           sha={sha}
@@ -372,7 +404,7 @@ export function RoutineEditor({
             setDetailExercise(null);
             setEditingUid(null);
           }}
-          saveLabel={editingUid ? 'Update exercise' : 'Add to routine'}
+          saveLabel={editingUid ? 'Update exercise' : `Add to ${noun}`}
         />
       )}
     </div>

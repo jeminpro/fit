@@ -50,6 +50,7 @@ import { RoutineEditor } from './RoutineEditor';
 import { RoutineSheet, type RoutineLinks } from './RoutineSheet';
 import { WeeklyPlanSheet } from './WeeklyPlanSheet';
 import { TemplateSheet } from './TemplateSheet';
+import { TemplatesPage } from './TemplatesPage';
 
 function newUid(): string {
   return crypto.randomUUID();
@@ -120,6 +121,7 @@ export function WorkoutPage() {
   const [routineOpen, setRoutineOpen] = useState(false);
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [weekPlanOpen, setWeekPlanOpen] = useState(false);
+  const [view, setView] = useState<'week' | 'templates'>('week');
   const [templateKind, setTemplateKind] = useState<TemplateKind | null>(null);
   const [detailExercise, setDetailExercise] = useState<ExerciseIndexItem | null>(null);
   const [editingEntryUid, setEditingEntryUid] = useState<string | null>(null);
@@ -750,6 +752,18 @@ export function WorkoutPage() {
     setSelectedDay(shifted);
   }
 
+  function setWorkoutView(next: 'week' | 'templates') {
+    setView(next);
+    setWeekPlanOpen(false);
+    setRoutineOpen(false);
+    setCopyOpen(false);
+    setTemplateKind(null);
+    setPickerOpen(false);
+    setEditingRoutineId(null);
+    setDetailExercise(null);
+    setEditingEntryUid(null);
+  }
+
   if (!activeProfile) {
     return (
       <div className="card p-6 text-center text-sm text-slate-400">
@@ -813,18 +827,71 @@ export function WorkoutPage() {
         <div>
           <h2 className="text-xl font-bold text-slate-100">Workout</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Plan exercises for any day and tick off sets as you go.
+            {view === 'templates'
+              ? 'Create routines, warmups, and cooldowns to reuse in your week plan.'
+              : 'Plan exercises for any day and tick off sets as you go.'}
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-secondary shrink-0 px-3 py-2 text-xs"
-          onClick={() => setWeekPlanOpen(true)}
-        >
-          Edit week plan
-        </button>
+        {view === 'week' && (
+          <button
+            type="button"
+            className="btn-secondary shrink-0 px-3 py-2 text-xs"
+            onClick={() => setWeekPlanOpen(true)}
+          >
+            Edit week plan
+          </button>
+        )}
       </div>
 
+      <div className="grid grid-cols-2 gap-2">
+        {(
+          [
+            { id: 'week', label: 'This week' },
+            { id: 'templates', label: 'Templates' },
+          ] as const
+        ).map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setWorkoutView(option.id)}
+            aria-pressed={view === option.id}
+            className={`cursor-pointer rounded-lg border py-2 text-sm font-medium transition ${
+              view === option.id
+                ? 'border-brand-500/60 bg-brand-500/15 text-brand-300'
+                : 'border-surface-700 bg-surface-900/60 text-slate-300 hover:border-slate-500'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
+      {(catalogError || saveError) && (
+        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+          {saveError || catalogError}
+        </div>
+      )}
+
+      {catalogLoading && (
+        <p className="text-center text-sm text-slate-500">Loading exercise catalog…</p>
+      )}
+
+      {view === 'templates' ? (
+        <TemplatesPage
+          routines={routines}
+          warmupTemplates={warmupTemplates}
+          cooldownTemplates={cooldownTemplates}
+          exercises={pickerExercises}
+          sha={catalog?.sha ?? ''}
+          units={units}
+          favouriteIds={favouriteIds}
+          recentIds={recentIds}
+          notes={exerciseNotes}
+          catalogLoading={catalogLoading}
+          onCreateCustom={ensureCustomExercise}
+        />
+      ) : (
+      <>
       <WeekStrip
         weekStart={weekStart}
         selectedDay={selectedDay}
@@ -891,16 +958,6 @@ export function WorkoutPage() {
           <p className="mt-2 text-xs text-slate-500">{primaryActionLabel}</p>
         )}
       </section>
-
-      {(catalogError || saveError) && (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
-          {saveError || catalogError}
-        </div>
-      )}
-
-      {catalogLoading && (
-        <p className="text-center text-sm text-slate-500">Loading exercise catalog…</p>
-      )}
 
       <WorkoutSectionCard
         title="Warm up"
@@ -994,7 +1051,8 @@ export function WorkoutPage() {
 
       {editingRoutine && (
         <RoutineEditor
-          routine={editingRoutine}
+          kind="routine"
+          template={editingRoutine}
           warmupTemplates={warmupTemplates}
           cooldownTemplates={cooldownTemplates}
           exercises={pickerExercises}
@@ -1004,7 +1062,7 @@ export function WorkoutPage() {
           recentIds={recentIds}
           notes={exerciseNotes}
           catalogLoading={catalogLoading}
-          onChange={(next) => void updateRoutine(next)}
+          onChange={(next) => void updateRoutine(next as Routine)}
           onCreateCustom={ensureCustomExercise}
           onClose={() => {
             setEditingRoutineId(null);
@@ -1072,6 +1130,8 @@ export function WorkoutPage() {
             editingEntryUid ? 'Update exercise' : addSaveLabel(pickerSection)
           }
         />
+      )}
+      </>
       )}
     </div>
   );

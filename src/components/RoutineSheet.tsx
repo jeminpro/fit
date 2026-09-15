@@ -184,7 +184,7 @@ export function RoutineSheet({
             </p>
             {routines.length === 0 ? (
               <p className="py-6 text-center text-sm text-slate-500">
-                No routines yet. Plan a day, then save it as a routine.
+                No routines yet. Add one in Templates, or plan a day and save it.
               </p>
             ) : (
               routines.map((routine) => (
